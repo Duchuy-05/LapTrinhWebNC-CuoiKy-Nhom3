@@ -29,6 +29,8 @@ Dự án ứng dụng các công nghệ lập trình web hiện đại để xâ
 * **Backend Runtime:** **Node.js** (Quản lý môi trường và thư viện).
 * **Quản lý mã nguồn:** Git/GitHub.
 
+## SRS
+* [SRS Chức năng quản lý khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
 
 ## Cấu hình và Cài đặt
 Để chạy dự án này ở môi trường local, bạn cần cài đặt Node.js SQL.
