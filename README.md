@@ -45,3 +45,11 @@ npm install
 
 # 4. Chạy dự án trên local server
 npm run
+
+---
+
+## Tài liệu Đặc tả Yêu cầu Hệ thống (SRS)
+Dưới đây là danh sách các tài liệu phân tích và thiết kế chi tiết cho từng module chức năng của hệ thống:
+
+1. [Quản lý Khóa học (ADMIN-Kiên)](./SRS_QuanLyKhoaHoc.md)
+2. [Quản lý Người dùng (ADMIN-Đại)](./SRS_QuanLyNguoiDung.md)
