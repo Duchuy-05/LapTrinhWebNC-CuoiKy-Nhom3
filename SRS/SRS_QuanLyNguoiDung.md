@@ -2,7 +2,7 @@
 ## Chức năng: Quản lý Người dùng (User Management)
 **Mã chức năng:** ADMIN-02  
 **Trạng thái:** Draft  
-**Người soạn thảo:** Hậu  
+**Người soạn thảo:** Nguyễn Trọng Đại
 **Vai trò:** Backend / Admin Developer
 
 ---
