@@ -73,7 +73,7 @@ Người quản trị muốn sử dụng hệ thống cần phải có tài kho�
 * **HTML:** Dùng để xây dựng cấu trúc của các trang web.
 * **CSS:** Dùng để thiết kế giao diện và bố cục cho website.
 * **JavaScript:** Dùng để xử lý các chức năng tương tác trên website.
-* **Laravel Php:** Dùng nodemodule để xây dựng cấu trúc cho trong web.
+* **Laravel Php:** Dùng Laravel để xây dựng cấu trúc cho trong web.
 
 #### Chương 3: Triển khai giải pháp và đánh giá kết quả
 
