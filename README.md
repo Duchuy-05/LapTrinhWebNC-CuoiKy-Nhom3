@@ -21,13 +21,11 @@ Dự án nghiên cứu và phát triển nền tảng học tập từ xa, hỗ 
 
 ---
 
-## Công nghệ sử dụng
-Dự án ứng dụng các công nghệ lập trình web hiện đại để xây dựng giao diện và xử lý luồng dữ liệu:
-
-* **Frontend:** HTML5, CSS3, JavaScript (ES6+).
-* **Framework:** **Reacjs** (Xây dựng giao diện).
-* **Backend Runtime:** **Node.js** (Quản lý môi trường và thư viện).
-* **Quản lý mã nguồn:** Git/GitHub.
+**Công nghệ sử dụng:**
+* **HTML:** Dùng để xây dựng cấu trúc của các trang web.
+* **CSS:** Dùng để thiết kế giao diện và bố cục cho website.
+* **JavaScript:** Dùng để xử lý các chức năng tương tác trên website.
+* **Laravel Php:** Dùng nodemodule để xây dựng cấu trúc cho trong web.
 
 ## SRS
 * [SRS Chức năng quản lý khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
