@@ -19,7 +19,7 @@
 ---
 
 ### 1. Tên đề tài
-Thiết kế website học trực tuyến.
+Thiết kế website học trực tuyến Laravel Php.
 
 ### 2. Sinh viên thực hiện
 
@@ -60,7 +60,7 @@ Người quản trị muốn sử dụng hệ thống cần phải có tài kho�
 * Khôi phục tài khoản cho người dùng khi cần thiết.
 
 **Chức năng dành cho người học (User)**
-Đối với người học, để sử dụng đầy đủ các chức năng như tham gia khóa học, lưu tiến độ học tập hoặc xem nội dung bài học chi tiết, người dùng cần phải đăng ký tài khoản và đăng nhập vào hệ thống[cite: 60].
+Đối với người học, để sử dụng đầy đủ các chức năng như tham gia khóa học, lưu tiến độ học tập hoặc xem nội dung bài học chi tiết, người dùng cần phải đăng ký tài khoản và đăng nhập vào hệ thống.
 * Xem danh sách các khóa học theo danh mục.
 * Xem chi tiết nội dung khóa học và bài giảng.
 * Đăng ký tài khoản và đăng nhập vào hệ thống.
@@ -73,7 +73,7 @@ Người quản trị muốn sử dụng hệ thống cần phải có tài kho�
 * **HTML:** Dùng để xây dựng cấu trúc của các trang web.
 * **CSS:** Dùng để thiết kế giao diện và bố cục cho website.
 * **JavaScript:** Dùng để xử lý các chức năng tương tác trên website.
-* **Node.js:** Dùng nodemodule để xây dựng cấu trúc cho trong web.
+* **Laravel Php:** Dùng nodemodule để xây dựng cấu trúc cho trong web.
 
 #### Chương 3: Triển khai giải pháp và đánh giá kết quả
 
