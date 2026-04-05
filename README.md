@@ -31,7 +31,3 @@ Dự án nghiên cứu và phát triển nền tảng học tập từ xa, hỗ 
 * [SRS Chức năng quản lý khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
 * [Quản lý Khóa học (ADMIN-Kiên)](./SRS_QuanLyKhoaHoc.md)
 * [Quản lý Người dùng (ADMIN-Đại)](./SRS_QuanLyNguoiDung.md)
-
-## Cấu hình và Cài đặt
-Để chạy dự án này ở môi trường local, bạn cần cài đặt Node.js SQL.
-
