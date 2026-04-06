@@ -44,6 +44,18 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
+        'mongodb' => [
+            'driver'   => 'mongodb',
+            'host'     => env('DB_HOST', '127.0.0.1'),
+            'port'     => env('DB_PORT', 27017),
+            'database' => env('DB_DATABASE', 'ten_database_cua_ban'),
+            'username' => env('DB_USERNAME', ''),
+            'password' => env('DB_PASSWORD', ''),
+            'options'  => [
+                // Ở đây bạn có thể thêm các option của MongoDB nếu cần, hiện tại để trống cũng được
+            ],
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
