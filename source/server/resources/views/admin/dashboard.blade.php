@@ -45,15 +45,15 @@
 
     <div class="col-lg-3 col-6">
         <div class="small-box bg-danger">
-            <div class="inner">
-                <h3>{{ $newOrders ?? 0 }}</h3> 
-                <p>Đơn hàng chờ duyệt</p>
-            </div>
-            <div class="icon">
+              <div class="inner">
+                <h3>{{ $completedOrders }}</h3>
+                <p>Giao dịch thành công</p>
+              </div>
+              <div class="icon">
                 <i class="fas fa-shopping-cart"></i>
-            </div>
-            <a href="{{ route('admin.orders.index') }}" class="small-box-footer">Xem chi tiết <i class="fas fa-arrow-circle-right"></i></a>
-        </div>
+              </div>
+              <a href="{{ route('admin.orders.index') }}" class="small-box-footer">Xem chi tiết <i class="fas fa-arrow-circle-right"></i></a>
+         </div>
     </div>
 </div>
 @endsection

@@ -3,6 +3,14 @@
 @section('content')
 <div class="card">
     <div class="card-body table-responsive p-0">
+        <div class="d-flex justify-content-end align-items-center p-3 pb-2">
+    <div class="input-group" style="width: 300px;">
+        <input type="text" id="searchInput" class="form-control" placeholder="Tìm kiếm nhanh...">
+        <div class="input-group-append">
+            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+        </div>
+    </div>
+</div>
         <table class="table table-hover text-nowrap">
             <thead>
                 <tr>
@@ -53,4 +61,28 @@
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById('searchInput');
+        
+        // Kiểm tra xem trang có ô tìm kiếm không rồi mới chạy
+        if(searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                let filter = this.value.toLowerCase();
+                let rows = document.querySelectorAll('table tbody tr');
+
+                rows.forEach(row => {
+                    let text = row.innerText.toLowerCase();
+                    // Ẩn hoặc hiện dòng nếu có chứa từ khóa
+                    if(text.includes(filter)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>
 @endsection
