@@ -20,8 +20,10 @@ class User extends Authenticatable
      * Các trường được phép thêm dữ liệu
      */
     protected $fillable = [
+        'name',
         'email',
         'password',
+        'role',
     ];
     /**
      * CỰC KỲ QUAN TRỌNG: Ẩn các trường này khi trả về API cho React

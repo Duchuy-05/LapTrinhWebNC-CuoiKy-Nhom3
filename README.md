@@ -29,27 +29,5 @@ Dự án nghiên cứu và phát triển nền tảng học tập từ xa, hỗ 
 
 ## SRS
 * [SRS Chức năng quản lý khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
-
-## Cấu hình và Cài đặt
-Để chạy dự án này ở môi trường local, bạn cần cài đặt Node.js SQL.
-
-```bash
-# 1. Clone dự án về máy
-git clone https://github.com/KienTT-05/LapTrinhWebNC-CuoiKy-Nhom3
-
-# 2. Truy cập vào thư mục dự án
-cd LapTrinhWebNC-CuoiKy-Nhom3
-
-# 3. Cài đặt các thư viện cần thiết
-npm install
-
-# 4. Chạy dự án trên local server
-npm run
-
----
-
-## Tài liệu Đặc tả Yêu cầu Hệ thống (SRS)
-Dưới đây là danh sách các tài liệu phân tích và thiết kế chi tiết cho từng module chức năng của hệ thống:
-
-1. [Quản lý Khóa học (ADMIN-Kiên)](./SRS_QuanLyKhoaHoc.md)
-2. [Quản lý Người dùng (ADMIN-Đại)](./SRS_QuanLyNguoiDung.md)
+* [Quản lý Khóa học (ADMIN-Kiên)](./SRS_QuanLyKhoaHoc.md)
+* [Quản lý Người dùng (ADMIN-Đại)](./SRS_QuanLyNguoiDung.md)
