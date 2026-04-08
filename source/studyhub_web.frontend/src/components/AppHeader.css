@@ -1,0 +1,165 @@
+/* Chuyển thành thanh điều hướng dọc (Sidebar) cố định bên trái */
+.app-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 80px; /* Độ rộng thanh menu */
+  background: linear-gradient(180deg, #1e78ff 0%, #7b2cbf 100%); /* Màu gradient rực rỡ */
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Đẩy top lên trên, bottom xuống dưới */
+  align-items: center;
+  padding: 24px 0;
+  z-index: 100;
+}
+
+.sidebar-top, .sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+}
+
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Kiểu dáng Logo */
+.logo-icon {
+  width: 50px;
+  height: 50px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  position: relative; /* Dùng cho Tooltip */
+}
+
+.logo:hover {
+  transform: scale(1.1);
+}
+
+.logo-icon {
+  font-size: 26px;
+}
+
+.nav-item {
+  position: relative; /* Cần thiết để neo Tooltip */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: #ffffff;
+  font-size: 22px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Hiệu ứng khi di chuột vào Icon */
+.nav-item:hover, .nav-item.active {
+  background-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px); /* Nhô nhẹ lên */
+}
+
+.btn-language {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #7b2cbf;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.settings-icon {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  padding-top: 20px;
+  height: auto;
+  border-radius: 0;
+}
+
+
+/* =========================================
+   HIỆU ỨNG TOOLTIP (Tên nhỏ khi hover) 
+   ========================================= */
+
+/* Hộp nội dung Tooltip */
+.nav-item::after, .logo::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%; /* Nằm bên phải của icon */
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 15px; /* Cách icon 15px */
+  background-color: #ffffff;
+  color: #333333;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap; /* Không cho rớt dòng */
+  opacity: 0; /* Mặc định ẩn */
+  visibility: hidden;
+  transition: all 0.3s ease;
+  pointer-events: none; /* Không cản trở click chuột */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+/* Mũi tên chỉ vào Icon của Tooltip */
+.nav-item::before, .logo::before {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px; /* Khớp với khoảng cách của nội dung */
+  border-width: 7px;
+  border-style: solid;
+  border-color: transparent #ffffff transparent transparent; /* Mũi tên màu trắng */
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Kích hoạt hiển thị Tooltip khi hover */
+.nav-item:hover::after, .logo:hover::after {
+  opacity: 1;
+  visibility: visible;
+  margin-left: 10px; /* Trượt nhẹ vào sát icon để tạo hiệu ứng mượt */
+}
+
+.nav-item:hover::before, .logo:hover::before {
+  opacity: 1;
+  visibility: visible;
+  margin-left: -4px;
+}
