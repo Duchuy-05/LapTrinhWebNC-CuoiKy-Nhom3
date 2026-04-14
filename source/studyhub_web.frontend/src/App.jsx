@@ -10,20 +10,17 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AuthLayout />}>
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
-        </Route>
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
 
         {/* Route App: Bảo vệ (cho các trang sau khi đăng nhập) */}
         <Route path="/" element={<AppLayout />}>
-
-        {/* Dashboard (Route con của AppLayout) */}
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="homework" element={<div className="flex-1 p-8 text-center bg-gray-50">Homework View - Placeholder</div>} />
-        <Route path="exams" element={<div className="flex-1 p-8 text-center bg-gray-50">Exams View - Placeholder</div>} />
-        <Route path="classes" element={<div className="flex-1 p-8 text-center bg-gray-50">Classes View - Placeholder</div>} />
-        <Route path="/courses" element={<Courses />} />
+          {/* Dashboard (Route con của AppLayout) */}
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="homework" element={<div className="flex-1 p-8 text-center bg-gray-50">Homework View - Placeholder</div>} />
+          <Route path="exams" element={<div className="flex-1 p-8 text-center bg-gray-50">Exams View - Placeholder</div>} />
+          <Route path="classes" element={<div className="flex-1 p-8 text-center bg-gray-50">Classes View - Placeholder</div>} />
+          <Route path="/courses" element={<Courses />} />
         </Route>
        { /* Nếu truy cập đường dẫn không tồn tại, tự động chuyển về trang login*/}
         <Route path="*" element={<Navigate to="/login" replace />} />

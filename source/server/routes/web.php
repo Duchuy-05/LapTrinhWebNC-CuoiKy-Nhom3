@@ -102,31 +102,31 @@ Route::middleware(['auth'])->prefix('student')->name('student.')->group(function
 });
 
 
-// ==========================================
-// VÙNG API CHO TRANG TEST (HTML BÊN NGOÀI)
-// ==========================================
-Route::get('/api/courses', function () {
-    $courses = \App\Models\Course::where('status', 'published')->get();
-    return response()->json($courses)
-            ->header('Access-Control-Allow-Origin', '*') 
-            ->header('Access-Control-Allow-Methods', 'GET');
-});
+// // ==========================================
+// // VÙNG API CHO TRANG TEST (HTML BÊN NGOÀI)
+// // ==========================================
+// Route::get('/api/courses', function () {
+//     $courses = \App\Models\Course::where('status', 'published')->get();
+//     return response()->json($courses)
+//             ->header('Access-Control-Allow-Origin', '*') 
+//             ->header('Access-Control-Allow-Methods', 'GET');
+// });
 
-Route::post('/api/login', [FrontendApiController::class, 'login'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+// Route::post('/api/login', [FrontendApiController::class, 'login'])
+//     ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
-Route::post('/api/register', [FrontendApiController::class, 'register'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+// Route::post('/api/register', [FrontendApiController::class, 'register'])
+//     ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
-Route::post('/api/create-order', [FrontendApiController::class, 'createOrder'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+// Route::post('/api/create-order', [FrontendApiController::class, 'createOrder'])
+//     ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
-Route::post('/api/webhook', [FrontendApiController::class, 'bankingWebhook'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+// Route::post('/api/webhook', [FrontendApiController::class, 'bankingWebhook'])
+//     ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
-Route::post('/api/my-courses', [FrontendApiController::class, 'myCourses'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+// Route::post('/api/my-courses', [FrontendApiController::class, 'myCourses'])
+//     ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 
-// Route để kiểm tra xem đơn hàng đã được Webhook cập nhật thành công chưa
-Route::get('/api/check-order/{id}', [App\Http\Controllers\FrontendApiController::class, 'checkOrder'])
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+// // Route để kiểm tra xem đơn hàng đã được Webhook cập nhật thành công chưa
+// Route::get('/api/check-order/{id}', [App\Http\Controllers\FrontendApiController::class, 'checkOrder'])
+//     ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
