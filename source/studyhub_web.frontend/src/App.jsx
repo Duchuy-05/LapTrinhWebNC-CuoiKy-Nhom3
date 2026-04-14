@@ -1,30 +1,35 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AuthLayout from "./layouts/AuthLayout";
-import AppLayout from "./layouts/AppLayout";
+import MainLayout from "./layouts/MainLayout";
 import Login from './views/Login';
 import Register from './views/Register';
 import Dashboard from "./views/Dashboard";
 import Courses from './views/Courses';
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="login" element={<Login />} />
-        <Route path="register" element={<Register />} />
-
-        {/* Route App: Bảo vệ (cho các trang sau khi đăng nhập) */}
-        <Route path="/" element={<AppLayout />}>
-          {/* Dashboard (Route con của AppLayout) */}
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="homework" element={<div className="flex-1 p-8 text-center bg-gray-50">Homework View - Placeholder</div>} />
-          <Route path="exams" element={<div className="flex-1 p-8 text-center bg-gray-50">Exams View - Placeholder</div>} />
-          <Route path="classes" element={<div className="flex-1 p-8 text-center bg-gray-50">Classes View - Placeholder</div>} />
-          <Route path="/courses" element={<Courses />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        {/* KHÔNG GIAN HỌC TẬP (Chế độ Học viên) */}
+        <Route path="/student" element={<MainLayout mode="student" />}>
+          <Route path="dashboard" element={<div className="p-8">Trang chủ học viên</div>} />
+          <Route path="my-courses" element={<div className="p-8">Khóa học tôi đang học</div>} />
+          <Route path="documents" element={<div className="p-8">Tài liệu tham khảo</div>} />
         </Route>
-       { /* Nếu truy cập đường dẫn không tồn tại, tự động chuyển về trang login*/}
-        <Route path="*" element={<Navigate to="/login" replace />} />
 
+        {/* KHÔNG GIAN GIẢNG DẠY (Chế độ Giảng viên) */}
+        <Route path="/lecturer" element={<MainLayout mode="lecturer" />}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="courses" element={<Courses />} /> 
+          <Route path="students" element={<div className="p-8">Quản lý học viên của tôi</div>} />
+        </Route>
+
+        {/* Mặc định vào app sẽ đẩy vào không gian học tập */}
+        <Route path="/" element={<Navigate to="/student/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
