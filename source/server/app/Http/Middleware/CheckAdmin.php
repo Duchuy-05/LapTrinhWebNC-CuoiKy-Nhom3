@@ -11,13 +11,25 @@ class CheckAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Kiểm tra xem User đã đăng nhập chưa VÀ role có phải là 'admin' không
-        if (Auth::check() && Auth::user()->role === 'admin') {
-            return $next($request); // Đúng là Admin thì mời đi tiếp
+        // Bước 1: Nếu chưa đăng nhập gì cả -> Đuổi về trang Đăng nhập Admin
+        if (!Auth::check()) {
+            return redirect('admin/login');
         }
 
-        // Nếu là học sinh (hoặc role khác), đá văng ra trang chủ hoặc báo lỗi
-        // Tạm thời mình cho đá văng ra trang chủ (bạn có thể đổi link khác)
-        return redirect('/')->with('error', 'Bạn không có quyền truy cập khu vực này!');
+        // Bước 2: Nếu ĐÃ đăng nhập và đúng là 'admin' -> Mở cửa cho vào Dashboard
+        if (Auth::user()->role === 'admin') {
+            return $next($request);
+        }
+
+        // Bước 3: Đã đăng nhập nhưng KHÔNG PHẢI admin (Học viên, Giảng viên...)
+        // Bắt buộc phải Hủy phiên đăng nhập của người này
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        // Đuổi về trang Đăng nhập và ném ra câu thông báo lỗi
+        return redirect('admin/login')->withErrors([
+            'email' => 'Quyền hạn của bạn không đủ để truy cập trang quản trị.'
+        ]);
     }
 }

@@ -23,6 +23,7 @@
     <a href="#" class="brand-link">
       <span class="brand-text font-weight-light">ADMIN SYSTEM</span>
     </a>
+
     <div class="sidebar">
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
@@ -49,17 +50,30 @@
               <p>Quản lý Khóa học</p>
             </a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item" style="margin-bottom: 60px;">
               <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
                   <i class="nav-icon fas fa-shopping-cart"></i>
                   <p>Quản lý Đơn hàng</p>
               </a>
           </li>
         </ul>
-        
       </nav>
     </div>
-  </aside>
+
+    <div style="position: absolute; bottom: 0; width: 100%; padding-bottom: 10px; border-top: 1px solid #4f5962; background: #343a40; z-index: 999;">
+      <ul class="nav nav-pills nav-sidebar flex-column">
+        <li class="nav-item">
+          <a href="#" class="nav-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+            <i class="nav-icon fas fa-sign-out-alt text-danger"></i>
+            <p class="text-danger">Đăng xuất</p>
+          </a>
+          <form id="logout-form" action="{{ route('admin.logout') }}" method="POST" style="display: none;">
+            @csrf
+          </form>
+        </li>
+      </ul>
+    </div>
+    </aside>
 
   <div class="content-wrapper">
     <div class="content-header">
