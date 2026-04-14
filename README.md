@@ -1,6 +1,6 @@
-# Xây dựng Website Học Trực Tuyến
+# Xây dựng Website Học Lập Trình Trực Tuyến
 
-Dự án nghiên cứu và phát triển nền tảng học tập từ xa, hỗ trợ giảng dạy và quản lý nội dung số hóa theo xu hướng chuyển đổi số trong giáo dục. 
+Dự án tập trung xây dựng một hệ sinh thái học tập trực tuyến (E-learning) chuyên biệt cho lĩnh vực lập trình. Nền tảng không chỉ cung cấp video bài giảng mà còn tích hợp các công cụ hỗ trợ thực hành mã nguồn trực tiếp, quản lý lộ trình học tập cá nhân hóa và kết nối cộng đồng người học.
 
 ---
 
@@ -22,10 +22,10 @@ Dự án nghiên cứu và phát triển nền tảng học tập từ xa, hỗ 
 ---
 
 **Công nghệ sử dụng:**
-* **HTML:** Dùng để xây dựng cấu trúc của các trang web.
-* **CSS:** Dùng để thiết kế giao diện và bố cục cho website.
-* **JavaScript:** Dùng để xử lý các chức năng tương tác trên website.
-* **Laravel Php:** Dùng Laravel để xây dựng cấu trúc cho trong web.
+* **React.js:** Xây dụng giao diện cho website
+* **Laravel Php:** Dùng Laravel để xây dựng cấu trúc hệ thống cho server
+* **Database:** MongoDB
+* **Công cụ:** Postman để test function
 
 ## SRS
 * [SRS Chức năng quản lý khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
