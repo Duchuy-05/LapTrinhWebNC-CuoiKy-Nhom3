@@ -21,6 +21,7 @@ export default function Login() {
         body: JSON.stringify({ email, password })
       });
       const data = await response.json();
+      console.log("Dữ liệu từ API Login:", data);
       if (!response.ok) {
         setErrorMessage(data.message || 'Email hoặc mật khẩu không chính xác!');
         return;

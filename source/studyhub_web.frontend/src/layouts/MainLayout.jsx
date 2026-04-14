@@ -14,7 +14,8 @@ export default function MainLayout({ mode }) {
   // Menu dành cho việc Dạy
   const teachMenu = [
     { to: '/lecturer/dashboard', icon: '📊', label: 'Thống kê' },
-    { to: '/lecturer/courses', icon: '📘', label: 'Quản lý khóa học' },
+    { to: '/lecturer/courses', icon: '📘', label: 'Khóa học' },
+    { to: '/lecturer/published-courses', icon: '📚', label: 'Khóa học đã xuất bản' },
     { to: '/lecturer/students', icon: '👥', label: 'Học viên' },
   ];
 

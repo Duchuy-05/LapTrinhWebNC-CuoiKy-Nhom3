@@ -5,6 +5,8 @@ import Login from './views/Login';
 import Register from './views/Register';
 import Dashboard from "./views/Dashboard";
 import Courses from './views/Courses';
+import CourseEditor from './views/CourseEditor';
+import PublishedCourses from './views/PublishedCourses';
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
         <Route path="/lecturer" element={<MainLayout mode="lecturer" />}>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="courses" element={<Courses />} /> 
+          <Route path="courses/:courseId/edit" element={<CourseEditor />} />
+          <Route path="published-courses" element={<PublishedCourses />} />
           <Route path="students" element={<div className="p-8">Quản lý học viên của tôi</div>} />
         </Route>
 

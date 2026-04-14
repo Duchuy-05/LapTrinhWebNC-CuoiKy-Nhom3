@@ -13,7 +13,7 @@ class Lesson extends Model
         'section_id',   // Thuộc chương nào
         'title',        // Tên bài giảng
         'video_url',    // Link video YouTube
-        'document_url', // Link file tài liệu PDF (nếu có)
+        'document_url', // Link file tài liệu PDF
         'content',      // Nội dung text của bài giảng
         'order'         // Thứ tự bài giảng trong chương
     ];
