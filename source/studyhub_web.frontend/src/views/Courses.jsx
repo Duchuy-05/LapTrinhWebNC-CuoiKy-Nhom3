@@ -17,7 +17,6 @@ const Courses = () => {
       setIsLoading(true);
       const response = await CourseAPI.getLecturerCourses();
       
-      // LỌC: CHỈ LẤY NHỮNG KHÓA CHƯA XUẤT BẢN (DRAFT hoặc ARCHIVED hoặc UNPUBLISHED)
       const drafts = (response.data.data || []).filter(c => c.status !== 'PUBLISHED');
       
       setCourses(drafts);

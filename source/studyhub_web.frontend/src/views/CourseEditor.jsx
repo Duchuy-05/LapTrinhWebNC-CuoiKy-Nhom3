@@ -107,7 +107,7 @@ export default function CourseEditor() {
         </div>
         <div className="flex-1 p-4 overflow-y-auto">
           {courseData.length === 0 && (
-            <p className="text-xs text-slate-400 text-center mt-10">Chưa có nội dung.<br/>Hãy bấm "+ Unit" để bắt đầu.</p>
+            <p className="text-xs text-slate-400 text-center mt-10">Chưa có nội dung.</p>
           )}
           {courseData.map(unit => (
             <div key={unit.id} className="mb-3 overflow-hidden border rounded">

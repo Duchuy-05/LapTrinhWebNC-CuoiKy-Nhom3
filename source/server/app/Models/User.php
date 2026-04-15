@@ -25,14 +25,16 @@ class User extends Authenticatable
         'password',
         'role',
     ];
-    /**
-     * CỰC KỲ QUAN TRỌNG: Ẩn các trường này khi trả về API cho React
-     * (Nếu không có mảng này, API sẽ trả về cả mật khẩu đã mã hóa)
-     */
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
+    
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'user_id');
+    }
     
     protected function casts(): array
     {
