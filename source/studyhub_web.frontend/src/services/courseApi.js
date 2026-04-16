@@ -9,7 +9,6 @@ const apiClient = axios.create({
   }
 });
 
-// 2. Cấu hình Interceptor: Tự động đính kèm Token vào mọi request
 apiClient.interceptors.request.use(
   (config) => {
     // Lấy token từ localStorage (trùng với key bạn đã set ở file Login.jsx)
@@ -27,14 +26,13 @@ apiClient.interceptors.request.use(
   }
 );
 
-// 3. (Tuỳ chọn) Cấu hình Interceptor xử lý lỗi: Nếu token hết hạn (lỗi 401), tự động đẩy về trang Login
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user_data');
-      window.location.href = '/login'; // Ép người dùng đăng nhập lại
+      window.location.href = '/login'; 
     }
     return Promise.reject(error);
   }
@@ -48,18 +46,19 @@ class CourseAPI {
   static async updateDraft(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/draft`, data); }
   static async publishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/publish`); }
   static async unpublishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/unpublish`); }
+  static async updateCoursePrice(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/price`, data); }
   static async uploadVideo(file) {
-    const formData = new FormData();
-    formData.append('video', file); // Chữ 'video' phải khớp với phần nhận file ở backend
+    const formData = new FormData(); // Tạo một chiếc "hộp" chuyên dụng để chứa file là FormData.
+    formData.append('video', file); // Nhét cái file đó vào hộp (formData.append()).
 
     return apiClient.post('/lecturer/courses/upload-video', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data', // Ghi đè Content-Type để gửi file
+        'Content-Type': 'multipart/form-data', //Gửi cái hộp đó đi và phải "nhắc" Axios đổi tem dán (Header) thành 'multipart/form-data'
       }
     });
   }
   static async uploadImage(file) {
-    const formData = new FormData();
+    const formData = new FormData(); 
     formData.append('image', file); // Phải khớp với 'image' trong validate của Laravel
 
     return apiClient.post('/lecturer/courses/upload-image', formData, {
@@ -68,6 +67,9 @@ class CourseAPI {
       }
     });
   }
+
+  static async getStudentDashboard() { return apiClient.get('/student/home'); }
+  static async getMyCourses() { return apiClient.get('/student/my-courses'); }
 }
 
 export default CourseAPI;

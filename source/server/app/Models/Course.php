@@ -22,7 +22,10 @@ class Course extends Model
         'blocks',        // Array: Nội dung soạn thảo (Cột giữa)
         'authorId',      // ID giảng viên
         'price',         // Giá gốc
-        'discountPrice'  // Giá giảm
+        'discountPrice' , // Giá giảm
+        'student_count', // Tổng số học viên đã mua
+        'rating_count',  // Tổng số lượt đánh giá
+        'rating_score', // Điểm đánh giá trung bình (ví dụ: 4.8)
     ];
 
     // Ép kiểu dữ liệu (Casting)
@@ -32,6 +35,9 @@ class Course extends Model
         'tags' => 'string', // Có thể để array nếu bạn thiết kế tags dạng mảng
         'version' => 'integer',
         'price' => 'integer',
-        'discountPrice' => 'integer'
+        'discountPrice' => 'integer',
+        'student_count' => 'integer',
+        'rating_count' => 'integer',
+        'rating_score' => 'float',
     ];
 }

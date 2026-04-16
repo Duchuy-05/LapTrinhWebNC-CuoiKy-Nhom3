@@ -2,26 +2,22 @@ import React, { useState } from 'react';
 import CourseAPI from '../services/courseApi'; 
 
 const VideoBlockEditor = ({ block, updateBlock }) => {
-  // Xác định tab mặc định từ dữ liệu đã lưu
   const [activeTab, setActiveTab] = useState(block.videoType || 'link');
   
-  // 1. STATE RIÊNG BIỆT CHO TỪNG CHỨC NĂNG
+  // 1. Map data cho đầy đủ, kể cả data cũ để không bị mất
   const initialVideoData = {
-    // Dữ liệu cho Tab Link Youtube
-    youtubeUrl: block.videoType === 'link' ? (block.url || '') : '',
-    youtubeTitle: block.videoType === 'link' ? (block.title || '') : '',
-    youtubeDuration: block.videoType === 'link' ? (block.duration || 2) : 2,
+    youtubeUrl: block.youtubeUrl || (block.videoType === 'link' ? block.url : '') || '',
+    youtubeTitle: block.youtubeTitle || (block.videoType === 'link' ? block.title : '') || '',
+    youtubeDuration: block.youtubeDuration || (block.videoType === 'link' ? block.duration : null) || 2,
     
-    // Dữ liệu cho Tab Upload máy tính
-    uploadUrl: block.videoType === 'upload' ? (block.url || '') : '',
-    uploadTitle: block.videoType === 'upload' ? (block.title || '') : '',
-    uploadDuration: block.videoType === 'upload' ? (block.duration || 2) : 2,
+    uploadUrl: block.uploadUrl || (block.videoType === 'upload' ? block.url : '') || '',
+    uploadTitle: block.uploadTitle || (block.videoType === 'upload' ? block.title : '') || '',
+    uploadDuration: block.uploadDuration || (block.videoType === 'upload' ? block.duration : null) || 2,
   };
 
   const [videoData, setVideoData] = useState(initialVideoData);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Trích xuất ID Youtube để preview
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -33,27 +29,15 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
     setVideoData((prevData) => ({ ...prevData, [field]: value }));
   };
 
-  // 2. LOGIC LƯU RIÊNG BIỆT
+  // 2. Hàm lưu đẩy toàn bộ Object videoData vào
   const handleSave = () => {
-    let dataToUpdate = {};
-
-    if (activeTab === 'link') {
-      dataToUpdate = {
-        url: videoData.youtubeUrl,
-        title: videoData.youtubeTitle,
-        duration: videoData.youtubeDuration,
-        videoType: 'link'
-      };
-    } else {
-      dataToUpdate = {
-        url: videoData.uploadUrl,
-        title: videoData.uploadTitle,
-        duration: videoData.uploadDuration,
-        videoType: 'upload'
-      };
-    }
+    const dataToUpdate = {
+      ...videoData,      // Lưu TẤT CẢ 6 trường: Url, Title, Duration của cả Youtube lẫn Upload
+      videoType: activeTab // Lưu kèm trạng thái hiện tại (Giảng viên chốt dùng cái nào)
+    };
 
     updateBlock(block.id, dataToUpdate);
+    alert("Đã lưu tạm thời thông tin Video!");
   };
 
   const handleCancel = () => {
@@ -72,7 +56,6 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
       
       handleChange('uploadUrl', uploadedUrl);
       
-      // Tự động gợi ý tiêu đề từ tên file cho phần Upload
       if (!videoData.uploadTitle) {
         handleChange('uploadTitle', file.name.split('.').slice(0, -1).join('.'));
       }
@@ -91,20 +74,20 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
       <div className="flex gap-6 mb-6 border-b border-slate-100 pb-2">
         <button 
           onClick={() => setActiveTab('link')}
-          className={`pb-2 text-sm font-bold transition-all ${activeTab === 'link' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`pb-2 text-sm font-bold transition-all cursor-pointer ${activeTab === 'link' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           LINK YOUTUBE
         </button>
         <button 
           onClick={() => setActiveTab('upload')}
-          className={`pb-2 text-sm font-bold transition-all ${activeTab === 'upload' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`pb-2 text-sm font-bold transition-all cursor-pointer ${activeTab === 'upload' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           UPLOAD FILE
         </button>
       </div>
 
       <div className="space-y-5">
-        {/* ===================== GIAO DIỆN TAB LINK ===================== */}
+        {/* TAB LINK */}
         {activeTab === 'link' && (
           <div className="animate-fadeIn space-y-4">
              {getYouTubeVideoId(videoData.youtubeUrl) && (
@@ -144,7 +127,6 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
                    <div className="flex items-center border rounded-lg overflow-hidden border-slate-200">
                      <input 
                        type="number"
-                       // thời gian tối thiểu 1 phút
                        min={1}
                        className="w-full p-2.5 outline-none text-center"
                        value={videoData.youtubeDuration}
@@ -158,7 +140,7 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
           </div>
         )}
 
-        {/* ===================== GIAO DIỆN TAB UPLOAD ===================== */}
+        {/* TAB UPLOAD */}
         {activeTab === 'upload' && (
           <div className="animate-fadeIn space-y-4">
              <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${videoData.uploadUrl ? 'border-green-200 bg-green-50/30' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}>
@@ -199,7 +181,6 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
                   <div className="flex items-center border rounded-lg overflow-hidden border-slate-200">
                     <input 
                       type="number" 
-                      // thời gian tối thiểu 1 phút
                       min={1}
                       className="w-full p-2.5 outline-none text-center"
                       value={videoData.uploadDuration}
@@ -214,6 +195,7 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
         <p className="text-xs text-slate-400">
           Học viên cần xem hết thời lượng yêu cầu để được tính là hoàn thành.
         </p>
+        
         {/* Footer Actions */}
         <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-50">
           <button 

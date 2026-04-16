@@ -15,9 +15,21 @@ class CourseController extends Controller
         $courses = Course::where('authorId', auth()->id())
                          ->orderBy('created_at', 'desc')
                          ->get();
+        
+        // Tối ưu hóa dữ liệu trả về cho danh sách
+        $courses->transform(function ($course) {
+            // Đếm số lượng Unit có trong khóa học
+            $course->unit_count = is_array($course->courseData) ? count($course->courseData) : 0;
+            
+            // Xóa mảng blocks để tránh payload API bị quá nặng khi tải danh sách
+            unset($course->blocks); 
+            
+            return $course;
+        });
                          
         return response()->json(['data' => $courses]);
     }
+
     /**
      * 1. Khởi tạo một khóa học mới (Luôn tạo bản DRAFT đầu tiên)
      */
@@ -32,7 +44,6 @@ class CourseController extends Controller
             'title' => $request->input('title', 'Khóa học mới'),
             'courseData' => [],
             'blocks' => [],
-            // Thêm dòng này để đánh dấu khóa học thuộc về giảng viên nào
             'authorId' => auth()->id(),
             'price' => 0,
             'discountPrice' => 0
@@ -46,7 +57,7 @@ class CourseController extends Controller
     }
 
     /**
-     * 2. Lấy thông tin bản nháp để soạn thảo (Dùng cho trang CourseEditor)
+     * 2. Lấy thông tin bản nháp để soạn thảo
      */
     public function showDraft($courseGroupId)
     {
@@ -86,24 +97,20 @@ class CourseController extends Controller
      */
     public function publish($courseGroupId)
     {
-        // Tìm bản Nháp hiện tại
         $draft = Course::where('courseGroupId', $courseGroupId)->where('status', 'DRAFT')->first();
 
         if (!$draft) {
             return response()->json(['message' => 'Không tìm thấy bản nháp để xuất bản'], 404);
         }
 
-        // BƯỚC A: Tìm bản Published cũ (nếu có) và đổi thành ARCHIVED
         Course::where('courseGroupId', $courseGroupId)
               ->where('status', 'PUBLISHED')
               ->update(['status' => 'ARCHIVED']);
 
-        // BƯỚC B: Clone (Nhân bản) bản Draft thành bản Published mới
-        $published = $draft->replicate(); // Lệnh replicate() của Laravel tạo ra bản sao mới
+        $published = $draft->replicate(); 
         $published->status = 'PUBLISHED';
         $published->save();
 
-        // BƯỚC C: Tăng version của bản Draft lên 1 cho lần chỉnh sửa tiếp theo
         $draft->increment('version');
 
         return response()->json([
@@ -122,5 +129,39 @@ class CourseController extends Controller
               ->update(['status' => 'UNPUBLISHED']);
 
         return response()->json(['message' => 'Đã ngừng xuất bản khóa học']);
+    }
+    /**
+     * 6. Cập nhật nhanh Giá bán cho khóa học (Cập nhật cả bản Live và Draft)
+     */
+    public function updatePrice(Request $request, $courseGroupId)
+    {
+        $request->validate([
+            'price' => 'required|numeric|min:0',
+            'discountPrice' => 'required|numeric|min:0',
+        ]);
+
+        // Cập nhật cho bản PUBLISHED (Để thay đổi hiển thị ngay lập tức cho học viên)
+        $publishedCourse = Course::where('courseGroupId', $courseGroupId)
+                                 ->where('status', 'PUBLISHED')
+                                 ->first();
+        if ($publishedCourse) {
+            $publishedCourse->update([
+                'price' => $request->price,
+                'discountPrice' => $request->discountPrice
+            ]);
+        }
+
+        // Cập nhật luôn cho bản DRAFT (Để lần xuất bản sau không bị đè mất giá mới)
+        $draftCourse = Course::where('courseGroupId', $courseGroupId)
+                             ->where('status', 'DRAFT')
+                             ->first();
+        if ($draftCourse) {
+            $draftCourse->update([
+                'price' => $request->price,
+                'discountPrice' => $request->discountPrice
+            ]);
+        }
+
+        return response()->json(['message' => 'Cập nhật giá thành công!']);
     }
 }

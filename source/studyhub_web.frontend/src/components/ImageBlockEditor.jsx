@@ -47,7 +47,7 @@ const ImageBlockEditor = ({ block, updateBlock }) => {
               </label>
               <button 
                 onClick={() => { setImageUrl(''); updateBlock(block.id, { content: '' }); }}
-                className="ml-2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700"
+                className="ml-2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 cursor-pointer"
               >
                 Xóa
               </button>

@@ -12,9 +12,10 @@ export default function CourseEditor() {
   const [courseData, setCourseData] = useState([]);
   const [activeItem, setActiveItem] = useState(null);
   const [expandedUnits, setExpandedUnits] = useState({});
-  const [blocks, setBlocks] = useState([]);
   
-  // 1. STATE QUẢN LÝ TRẠNG THÁI LOADING KHI ĐANG TẢI ẢNH
+  // 1. object {} để lưu Block theo từng ID bài học riêng biệt
+  const [blocksByLesson, setBlocksByLesson] = useState({});
+  
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
   const toggleUnit = (unitId) => setExpandedUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
@@ -31,7 +32,10 @@ export default function CourseEditor() {
   const handleAddLesson = (unitId) => {
     const title = window.prompt("Nhập tên bài học mới:");
     if (title?.trim()) {
-      setCourseData(courseData.map(u => u.id === unitId ? { ...u, items: [...u.items, { id: `l${Date.now()}`, title }] } : u));
+      const newLessonId = `l${Date.now()}`;
+      setCourseData(courseData.map(u => u.id === unitId ? { ...u, items: [...u.items, { id: newLessonId, title }] } : u));
+      // Tự động gán mảng rỗng cho bài học mới để tránh lỗi
+      setBlocksByLesson(prev => ({ ...prev, [newLessonId]: [] }));
     }
   };
 
@@ -63,7 +67,18 @@ export default function CourseEditor() {
           setActiveItem(null);
         }
 
-        setBlocks(draft.blocks || []);
+        // 2. LOGIC TƯƠNG THÍCH NGƯỢC
+        // Nếu DB cũ đang lưu mảng array, ta nhét tạm nó vào bài học đầu tiên để không mất data.
+        let parsedBlocks = draft.blocks || {};
+        if (Array.isArray(parsedBlocks)) {
+          if (parsedBlocks.length > 0 && dbCourseData.length > 0 && dbCourseData[0].items.length > 0) {
+            const firstLessonId = dbCourseData[0].items[0].id;
+            parsedBlocks = { [firstLessonId]: parsedBlocks };
+          } else {
+            parsedBlocks = {};
+          }
+        }
+        setBlocksByLesson(parsedBlocks);
 
       } catch (error) {
         console.error("Lỗi lấy dữ liệu bản nháp:", error);
@@ -75,18 +90,14 @@ export default function CourseEditor() {
     }
   }, [courseId]);
 
-  // 2. HÀM XỬ LÝ UPLOAD THUMBNAIL
   const handleThumbnailUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploadingThumb(true);
     try {
-      // Tái sử dụng lại API uploadImage đã viết ở phần Block Ảnh
       const response = await CourseAPI.uploadImage(file);
       const imageUrl = response.data.imageUrl;
-      
-      // Cập nhật đường dẫn URL vào state courseDetails
       setCourseDetails({ ...courseDetails, thumbnail: imageUrl });
     } catch (error) {
       console.error("Lỗi tải ảnh:", error);
@@ -106,8 +117,8 @@ export default function CourseEditor() {
         price: Number(courseDetails.price) || 0,
         discountPrice: Number(courseDetails.discountPrice) || 0,
         courseData: courseData || [], 
-        blocks: blocks || []
-
+        // 3. Lưu toàn bộ Object chứa các block của tất cả bài học
+        blocks: blocksByLesson || {} 
       };
 
       await CourseAPI.updateDraft(courseId, payload);
@@ -122,7 +133,7 @@ export default function CourseEditor() {
   return (
     <div className="flex h-[calc(100vh-64px)] bg-slate-50 border-t overflow-hidden">
       
-      {/* CỘT TRÁI: Cấu trúc khóa học */}
+      {/* CỘT TRÁI */}
       <div className="flex flex-col w-1/5 bg-white border-r shadow-sm transition-all duration-300">
         <div className="flex items-center justify-between p-4 font-bold border-b bg-slate-50 text-slate-700 text-sm">
           <span>Nội dung</span>
@@ -130,7 +141,7 @@ export default function CourseEditor() {
         </div>
         <div className="flex-1 p-4 overflow-y-auto">
           {courseData.length === 0 && (
-            <p className="text-xs text-slate-400 text-center mt-10">Chưa có nội dung.<br/>Hãy bấm "+ Unit" để bắt đầu.</p>
+            <p className="text-xs text-slate-400 text-center mt-10">Chưa có nội dung.</p>
           )}
           {courseData.map(unit => (
             <div key={unit.id} className="mb-3 overflow-hidden border rounded">
@@ -158,7 +169,13 @@ export default function CourseEditor() {
       {/* CỘT GIỮA: TRÌNH SOẠN THẢO */}
       <div className="flex-1 flex flex-col border-r shadow-inner bg-white overflow-hidden transition-all duration-300">
         {activeItem ? (
-          <BlockEditor lessonTitle={activeItem.title} blocks={blocks} setBlocks={setBlocks} />
+          <BlockEditor 
+            lessonTitle={activeItem.title} 
+            // 4. Chỉ truyền Block của riêng bài học đang được chọn
+            blocks={blocksByLesson[activeItem.id] || []} 
+            // Khi BlockEditor thay đổi, chỉ lưu vào đúng ID của bài học đó
+            setBlocks={(newBlocks) => setBlocksByLesson({...blocksByLesson, [activeItem.id]: newBlocks})} 
+          />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 font-medium space-y-2">
             <span className="text-4xl opacity-20">📝</span>
@@ -182,6 +199,7 @@ export default function CourseEditor() {
 
         {isRightSidebarOpen && (
           <div className="flex-1 p-5 space-y-6 overflow-y-auto">
+            {/* Các trường nhập liệu cấu hình khóa học giữ nguyên như cũ... */}
             <div>
               <label className="block mb-2 text-sm font-bold text-slate-600">Tên khóa học</label>
               <input type="text" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={courseDetails.title} onChange={(e) => setCourseDetails({...courseDetails, title: e.target.value})} />
@@ -190,20 +208,14 @@ export default function CourseEditor() {
               <label className="block mb-2 text-sm font-bold text-slate-600">Mô tả ngắn</label>
               <textarea className="w-full h-28 p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" placeholder="Mô tả tóm tắt về khóa học..." value={courseDetails.description} onChange={(e) => setCourseDetails({...courseDetails, description: e.target.value})}></textarea>
             </div>
-            
-            {/* 3. LOGIC HIỂN THỊ VÀ UPLOAD THUMBNAIL MỚI */}
             <div>
               <label className="block mb-2 text-sm font-bold text-slate-600">Ảnh đại diện</label>
-              
               <div className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl bg-slate-50 border-slate-300 hover:bg-blue-50 transition-all overflow-hidden group">
                 {isUploadingThumb ? (
                   <span className="text-sm font-bold text-blue-500 animate-pulse">ĐANG TẢI...</span>
                 ) : courseDetails.thumbnail ? (
                   <>
-                    {/* object-cover giúp ảnh tự căn chỉnh lấp đầy khung mà không bị méo */}
                     <img src={courseDetails.thumbnail} alt="Thumbnail" className="object-cover w-full h-full" />
-                    
-                    {/* Lớp phủ (Overlay) hiện ra khi hover chuột vào ảnh để đổi ảnh khác */}
                     <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                       <span className="text-white text-xs font-bold px-3 py-1.5 border border-white rounded-lg">Đổi ảnh khác</span>
                       <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailUpload} />
@@ -218,37 +230,20 @@ export default function CourseEditor() {
                 )}
               </div>
             </div>
-
             <div>
               <label className="block mb-2 text-sm font-bold text-slate-600">Từ khóa (Tags)</label>
               <input type="text" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="reactjs, tutorial..." value={courseDetails.tags} onChange={(e) => setCourseDetails({...courseDetails, tags: e.target.value})} />
             </div>
-
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block mb-2 text-xs font-bold text-slate-600">Giá gốc (VNĐ)</label>
-                <input 
-                  type="number" 
-                  min="0"
-                  className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                  placeholder="VD: 500000" 
-                  value={courseDetails.price} 
-                  onChange={(e) => setCourseDetails({...courseDetails, price: e.target.value})} 
-                />
+                <input type="number" min="0" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="VD: 500000" value={courseDetails.price} onChange={(e) => setCourseDetails({...courseDetails, price: e.target.value})} />
               </div>
               <div className="flex-1">
                 <label className="block mb-2 text-xs font-bold text-slate-600">Giá giảm (VNĐ)</label>
-                <input 
-                  type="number" 
-                  min="0"
-                  className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                  placeholder="VD: 399000" 
-                  value={courseDetails.discountPrice} 
-                  onChange={(e) => setCourseDetails({...courseDetails, discountPrice: e.target.value})} 
-                />
+                <input type="number" min="0" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="VD: 399000" value={courseDetails.discountPrice} onChange={(e) => setCourseDetails({...courseDetails, discountPrice: e.target.value})} />
               </div>
             </div>
-
             <div className="pt-4">
               <button onClick={handleSaveDraft} className="w-full py-3.5 font-bold text-white transition-all bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 active:scale-[0.98] cursor-pointer">
                 LƯU THÔNG TIN

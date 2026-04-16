@@ -6,9 +6,8 @@ import Sidebar from '../components/Sidebar';
 export default function MainLayout({ mode }) {
   // Menu dành cho việc Học
   const learnMenu = [
-    { to: '/student/dashboard', icon: '🏠', label: 'Trang chủ' },
+    { to: '/student/home', icon: '🏠', label: 'Trang chủ' },
     { to: '/student/my-courses', icon: '📖', label: 'Khóa học của tôi' },
-    { to: '/student/documents', icon: '📁', label: 'Tài liệu' },
   ];
 
   // Menu dành cho việc Dạy

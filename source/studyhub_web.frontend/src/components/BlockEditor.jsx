@@ -1,6 +1,7 @@
 import React from 'react';
 import VideoBlockEditor from './VideoBlockEditor'; // Import component con
 import ImageBlockEditor from './ImageBlockEditor';
+import QuizBlockEditor from './QuizBlockEditor';
 const BlockEditor = ({ lessonTitle, blocks, setBlocks }) => {
   
   // Hàm thêm khối mới
@@ -89,11 +90,11 @@ const updateBlockData = (id, data) => {
 
               {block.type === 'quiz' && (
                 <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Bài Tập</span>
-                  <div className="space-y-3">
-                    <input type="text" placeholder="Nhập câu hỏi..." className="w-full p-2 border rounded font-medium focus:outline-blue-500" />
-                    <button className="text-sm text-blue-500 hover:underline">+ Thêm phương án trả lời</button>
-                  </div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Bài Tập Trắc Nghiệm</span>
+                  <QuizBlockEditor 
+                    block={block} 
+                    updateBlock={updateBlockData} 
+                  />
                 </div>
               )}
             </div>
@@ -102,16 +103,16 @@ const updateBlockData = (id, data) => {
 
         {/* Floating Toolbar: Công cụ thêm khối */}
         <div className="sticky bottom-6 mt-10 p-3 bg-white border shadow-2xl rounded-full flex justify-center gap-2 w-max mx-auto z-10 border-blue-100">
-          <button onClick={() => addBlock('text')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all">
+          <button onClick={() => addBlock('text')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
             + Văn bản
           </button>
-          <button onClick={() => addBlock('video')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all">
+          <button onClick={() => addBlock('video')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all cursor-pointer ">
             + Video
           </button>
-          <button onClick={() => addBlock('image')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all">
+          <button onClick={() => addBlock('image')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
             + Ảnh
           </button>
-          <button onClick={() => addBlock('quiz')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all">
+          <button onClick={() => addBlock('quiz')} className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-50 rounded-full hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
             + Bài tập
           </button>
         </div>

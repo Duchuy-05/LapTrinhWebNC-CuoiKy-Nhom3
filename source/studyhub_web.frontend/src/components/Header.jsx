@@ -17,7 +17,7 @@ export default function CommonHeader({ mode }) {
     if (mode === 'student') {
       navigate('/lecturer/dashboard'); // Đang ở Học viên -> Chuyển sang Giảng viên
     } else {
-      navigate('/student/dashboard'); // Đang ở Giảng viên -> Chuyển về Học viên
+      navigate('/student/home'); // Đang ở Giảng viên -> Chuyển về Học viên
     }
   };
 
@@ -34,16 +34,6 @@ export default function CommonHeader({ mode }) {
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/student/dashboard')}>
         <img src={StudyHubLogo} alt="Logo" className="w-10 h-10 rounded-lg" />
         <span className="text-xl font-black text-blue-600 tracking-tight">StudyHub</span>
-      </div>
-
-      {/* GIỮA: Thanh tìm kiếm */}
-      <div className="hidden md:flex relative w-96">
-        <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Tìm khóa học, tài liệu..." 
-          className="w-full bg-slate-100 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" 
-        />
       </div>
 
       {/* PHẢI: Thông báo & Avatar (Chứa Dropdown) */}
