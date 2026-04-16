@@ -4,8 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FrontendApiController;
-use App\Http\Controllers\Api\CourseController; // Đừng quên import CourseController
-
+use App\Http\Controllers\Api\CourseController; 
+use App\Http\Controllers\Api\VideoUploadController;
+use App\Http\Controllers\Api\ImageUploadController;
 // ==========================================
 // VÙNG API CÔNG CỘNG (Không cần đăng nhập)
 // ==========================================
@@ -39,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{courseGroupId}/draft', [CourseController::class, 'updateDraft']); // Sửa bản nháp
         Route::post('/{courseGroupId}/publish', [CourseController::class, 'publish']); // Xuất bản
         Route::post('/{courseGroupId}/unpublish', [CourseController::class, 'unpublish']); // Ngừng xuất bản
+        Route::post('/upload-video', VideoUploadController::class); // Upload video bài giảng
+        Route::post('/upload-image', ImageUploadController::class); // Upload hình ảnh minh họa
     });
 
 });

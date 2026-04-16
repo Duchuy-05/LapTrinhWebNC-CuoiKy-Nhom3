@@ -1,16 +1,31 @@
 import React from 'react';
-
+import VideoBlockEditor from './VideoBlockEditor'; // Import component con
+import ImageBlockEditor from './ImageBlockEditor';
 const BlockEditor = ({ lessonTitle, blocks, setBlocks }) => {
   
   // Hàm thêm khối mới
-  const addBlock = (type) => {
-    const newBlock = { id: Date.now().toString(), type: type, content: '' };
+const addBlock = (type) => {
+    const newBlock = { 
+      id: Date.now().toString(), 
+      type: type, 
+      content: '', 
+      // Khởi tạo data rỗng cho video
+      videoData: type === 'video' ? {} : null 
+    };
     setBlocks([...blocks, newBlock]);
   };
 
-  // Hàm xóa khối
-  const removeBlock = (id) => {
+ // Hàm xóa khối
+const removeBlock = (id) => {
     setBlocks(blocks.filter(block => block.id !== id));
+  };
+
+// hàm cập nhật 
+const updateBlockData = (id, data) => {
+    setBlocks(blocks.map(block => 
+      // Nếu là text thì data là chuỗi, nếu là video thì data là object
+      block.id === id ? { ...block, ...data } : block
+    ));
   };
 
   // Hàm cập nhật nội dung khối
@@ -46,28 +61,29 @@ const BlockEditor = ({ lessonTitle, blocks, setBlocks }) => {
                   <textarea 
                     className="w-full min-h-[120px] p-0 border-none resize-none focus:ring-0 text-slate-700 outline-none"
                     placeholder="Bắt đầu viết nội dung bài giảng..."
-                    value={block.content}
+                    value={block.content || ''}
                     onChange={(e) => updateBlockContent(block.id, e.target.value)}
                   />
                 </div>
               )}
-
+              {/*// Logic render cho block video sẽ được xử lý bởi component con VideoBlockEditor*/ }
               {block.type === 'video' && (
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Video</span>
-                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg border-slate-300 bg-slate-50 hover:bg-slate-100 cursor-pointer transition">
-                    <span className="text-3xl mb-2">☁️</span>
-                    <p className="text-sm text-slate-500 font-medium">Tải lên video bài giảng</p>
-                  </div>
+                  <VideoBlockEditor 
+                    block={block} 
+                    updateBlock={updateBlockData} 
+                  />
                 </div>
               )}
 
               {block.type === 'image' && (
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Hình Ảnh</span>
-                  <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg border-slate-300 bg-slate-50 hover:bg-slate-100 cursor-pointer transition">
-                    <p className="text-sm text-slate-500 font-medium">📸 Chọn hình ảnh minh họa</p>
-                  </div>
+                  <ImageBlockEditor 
+                    block={block} 
+                    updateBlock={updateBlockData} 
+                  />
                 </div>
               )}
 

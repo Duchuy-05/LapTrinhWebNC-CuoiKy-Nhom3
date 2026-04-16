@@ -48,6 +48,26 @@ class CourseAPI {
   static async updateDraft(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/draft`, data); }
   static async publishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/publish`); }
   static async unpublishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/unpublish`); }
+  static async uploadVideo(file) {
+    const formData = new FormData();
+    formData.append('video', file); // Chữ 'video' phải khớp với phần nhận file ở backend
+
+    return apiClient.post('/lecturer/courses/upload-video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data', // Ghi đè Content-Type để gửi file
+      }
+    });
+  }
+  static async uploadImage(file) {
+    const formData = new FormData();
+    formData.append('image', file); // Phải khớp với 'image' trong validate của Laravel
+
+    return apiClient.post('/lecturer/courses/upload-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+  }
 }
 
 export default CourseAPI;

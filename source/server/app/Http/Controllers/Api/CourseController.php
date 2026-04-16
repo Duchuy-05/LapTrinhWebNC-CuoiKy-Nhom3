@@ -33,7 +33,9 @@ class CourseController extends Controller
             'courseData' => [],
             'blocks' => [],
             // Thêm dòng này để đánh dấu khóa học thuộc về giảng viên nào
-            'authorId' => auth()->id() 
+            'authorId' => auth()->id(),
+            'price' => 0,
+            'discountPrice' => 0
         ]);
 
         if (!$course) {
@@ -73,7 +75,7 @@ class CourseController extends Controller
         }
 
         $draft->update($request->only([
-            'title', 'description', 'thumbnail', 'tags', 'courseData', 'blocks'
+            'title', 'description', 'thumbnail', 'tags', 'courseData', 'blocks', 'price', 'discountPrice'
         ]));
 
         return response()->json(['message' => 'Đã lưu bản nháp', 'data' => $draft]);

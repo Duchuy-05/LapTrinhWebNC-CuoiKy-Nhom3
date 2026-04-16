@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import BlockEditor from '../components/BlockEditor'; 
 import CourseAPI from '../services/courseApi'; 
 
 export default function CourseEditor() {
   const { courseId } = useParams();
+  const navigate = useNavigate();
 
-  // 1. XÓA SẠCH DỮ LIỆU MẪU, BẮT ĐẦU VỚI STATE RỖNG
-  const [courseDetails, setCourseDetails] = useState({ title: 'Đang tải...', description: '', thumbnail: null, tags: '' });
+  const [courseDetails, setCourseDetails] = useState({ title: 'Đang tải...', description: '', thumbnail: null, tags: '', price: '', discountPrice: '' });
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [courseData, setCourseData] = useState([]);
   const [activeItem, setActiveItem] = useState(null);
   const [expandedUnits, setExpandedUnits] = useState({});
   const [blocks, setBlocks] = useState([]);
+  
+  // 1. STATE QUẢN LÝ TRẠNG THÁI LOADING KHI ĐANG TẢI ẢNH
+  const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
-  // --- Logic xử lý Unit/Lesson (Giữ nguyên) ---
   const toggleUnit = (unitId) => setExpandedUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
   
   const handleAddUnit = () => {
@@ -33,7 +35,6 @@ export default function CourseEditor() {
     }
   };
 
-  // 2. KÉO DỮ LIỆU TỪ DB VÀ ÉP GIAO DIỆN HIỂN THỊ CHÍNH XÁC
   useEffect(() => {
     const fetchDraftData = async () => {
       try {
@@ -44,19 +45,18 @@ export default function CourseEditor() {
           title: draft.title || '',
           description: draft.description || '',
           thumbnail: draft.thumbnail || null,
-          tags: draft.tags || ''
+          tags: draft.tags || '',
+          price: draft.price || '',
+          discountPrice: draft.discountPrice || ''
         });
 
-        // Lấy đúng cấu trúc từ DB (Dù là mảng rỗng)
         const dbCourseData = draft.courseData || [];
         setCourseData(dbCourseData);
 
-        // Mở sẵn các Unit
         const expanded = {};
         dbCourseData.forEach(u => expanded[u.id] = true);
         setExpandedUnits(expanded);
 
-        // Nếu có bài học, tự động chọn bài đầu tiên
         if (dbCourseData.length > 0 && dbCourseData[0].items && dbCourseData[0].items.length > 0) {
           setActiveItem(dbCourseData[0].items[0]);
         } else {
@@ -75,7 +75,27 @@ export default function CourseEditor() {
     }
   }, [courseId]);
 
-  // 3. HÀM LƯU DỮ LIỆU ĐƯỢC NÂNG CẤP BẮT LỖI CHI TIẾT
+  // 2. HÀM XỬ LÝ UPLOAD THUMBNAIL
+  const handleThumbnailUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploadingThumb(true);
+    try {
+      // Tái sử dụng lại API uploadImage đã viết ở phần Block Ảnh
+      const response = await CourseAPI.uploadImage(file);
+      const imageUrl = response.data.imageUrl;
+      
+      // Cập nhật đường dẫn URL vào state courseDetails
+      setCourseDetails({ ...courseDetails, thumbnail: imageUrl });
+    } catch (error) {
+      console.error("Lỗi tải ảnh:", error);
+      alert("Không thể tải ảnh lên. Vui lòng kiểm tra lại định dạng hoặc dung lượng!");
+    } finally {
+      setIsUploadingThumb(false);
+    }
+  };
+
   const handleSaveDraft = async () => {
     try {
       const payload = {
@@ -83,14 +103,17 @@ export default function CourseEditor() {
         description: courseDetails.description || '',
         thumbnail: courseDetails.thumbnail || null,
         tags: courseDetails.tags || '',
+        price: Number(courseDetails.price) || 0,
+        discountPrice: Number(courseDetails.discountPrice) || 0,
         courseData: courseData || [], 
-        blocks: blocks || []          
+        blocks: blocks || []
+
       };
 
       await CourseAPI.updateDraft(courseId, payload);
       alert("Đã lưu bản nháp thành công!");
+      navigate('/lecturer/courses');
     } catch (error) {
-      // Báo lỗi chính xác từ Laravel thay vì báo chung chung
       console.error("Lỗi khi lưu bản nháp:", error.response?.data);
       alert("Lưu thất bại: " + (error.response?.data?.message || "Vui lòng xem chi tiết lỗi ở F12 -> Console"));
     }
@@ -164,22 +187,70 @@ export default function CourseEditor() {
               <input type="text" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={courseDetails.title} onChange={(e) => setCourseDetails({...courseDetails, title: e.target.value})} />
             </div>
             <div>
-              <label className="block mb-2 text-sm font-bold text-slate-600">Mô tả tổng quan</label>
+              <label className="block mb-2 text-sm font-bold text-slate-600">Mô tả ngắn</label>
               <textarea className="w-full h-28 p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" placeholder="Mô tả tóm tắt về khóa học..." value={courseDetails.description} onChange={(e) => setCourseDetails({...courseDetails, description: e.target.value})}></textarea>
             </div>
+            
+            {/* 3. LOGIC HIỂN THỊ VÀ UPLOAD THUMBNAIL MỚI */}
             <div>
               <label className="block mb-2 text-sm font-bold text-slate-600">Ảnh đại diện</label>
-              <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl bg-slate-50 border-slate-300 hover:bg-blue-50 transition-all cursor-pointer">
-                <span className="text-2xl mb-1">📸</span>
-                <span className="text-[10px] text-slate-500 font-medium text-center px-4 uppercase">Nhấn để tải ảnh lên</span>
+              
+              <div className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl bg-slate-50 border-slate-300 hover:bg-blue-50 transition-all overflow-hidden group">
+                {isUploadingThumb ? (
+                  <span className="text-sm font-bold text-blue-500 animate-pulse">ĐANG TẢI...</span>
+                ) : courseDetails.thumbnail ? (
+                  <>
+                    {/* object-cover giúp ảnh tự căn chỉnh lấp đầy khung mà không bị méo */}
+                    <img src={courseDetails.thumbnail} alt="Thumbnail" className="object-cover w-full h-full" />
+                    
+                    {/* Lớp phủ (Overlay) hiện ra khi hover chuột vào ảnh để đổi ảnh khác */}
+                    <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      <span className="text-white text-xs font-bold px-3 py-1.5 border border-white rounded-lg">Đổi ảnh khác</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailUpload} />
+                    </label>
+                  </>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
+                    <span className="text-2xl mb-1">📸</span>
+                    <span className="text-[10px] text-slate-500 font-medium text-center px-4 uppercase">Nhấn để tải ảnh lên</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailUpload} />
+                  </label>
+                )}
               </div>
             </div>
+
             <div>
               <label className="block mb-2 text-sm font-bold text-slate-600">Từ khóa (Tags)</label>
               <input type="text" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="reactjs, tutorial..." value={courseDetails.tags} onChange={(e) => setCourseDetails({...courseDetails, tags: e.target.value})} />
             </div>
+
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block mb-2 text-xs font-bold text-slate-600">Giá gốc (VNĐ)</label>
+                <input 
+                  type="number" 
+                  min="0"
+                  className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                  placeholder="VD: 500000" 
+                  value={courseDetails.price} 
+                  onChange={(e) => setCourseDetails({...courseDetails, price: e.target.value})} 
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block mb-2 text-xs font-bold text-slate-600">Giá giảm (VNĐ)</label>
+                <input 
+                  type="number" 
+                  min="0"
+                  className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+                  placeholder="VD: 399000" 
+                  value={courseDetails.discountPrice} 
+                  onChange={(e) => setCourseDetails({...courseDetails, discountPrice: e.target.value})} 
+                />
+              </div>
+            </div>
+
             <div className="pt-4">
-              <button onClick={handleSaveDraft} className="w-full py-3.5 font-bold text-white transition-all bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 active:scale-[0.98]">
+              <button onClick={handleSaveDraft} className="w-full py-3.5 font-bold text-white transition-all bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 active:scale-[0.98] cursor-pointer">
                 LƯU THÔNG TIN
               </button>
             </div>
