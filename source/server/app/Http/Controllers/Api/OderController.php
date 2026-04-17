@@ -1,30 +1,48 @@
 <?php
 
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Course;
-
 class OderController extends Controller
 {
     public function myCourses(Request $request)
     {
-        $userId = auth()->id();
+        $userId = auth()->id(); // Hoặc auth('sanctum')->id() tùy cấu hình của bạn
 
-        // 1. Lấy tất cả course_id từ bảng Order của User này
-        $enrolledCourseIds = Order::where('user_id', $userId)
-                                  ->pluck('course_id') // Đây là courseGroupId
-                                  ->toArray();
+        // 1. Lấy tất cả các đơn hàng (chứa tiến độ) của user này
+        $orders = Order::where('user_id', $userId)->get();
 
-        if (empty($enrolledCourseIds)) {
+        if ($orders->isEmpty()) {
             return response()->json(['data' => []]);
         }
 
-        // 2. Lấy thông tin các khóa học tương ứng
-        // Lưu ý: Luôn lấy bản PUBLISHED mới nhất để học viên học
+        // Lấy mảng ID khóa học
+        $enrolledCourseIds = $orders->pluck('course_id')->toArray();
+
+        // 2. Lấy thông tin chi tiết các khóa học
         $courses = Course::whereIn('courseGroupId', $enrolledCourseIds)
                          ->where('status', 'PUBLISHED')
                          ->get();
 
-        return response()->json(['data' => $courses]);
+        // 3. Gộp dữ liệu: Ghép 'progress' từ bảng Order vào từng Khóa học
+        $coursesWithProgress = $courses->map(function($course) use ($orders) {
+            // Tìm Order tương ứng với khóa học này
+            $order = $orders->firstWhere('course_id', $course->courseGroupId);
+            
+            // Chuyển object Course thành mảng để dễ thêm dữ liệu
+            $courseData = $course->toArray();
+            
+            // Bơm thêm biến progress vào (nếu không có thì mặc định là 0)
+            $courseData['progress'] = $order ? ($order->progress ?? 0) : 0;
+            
+            return $courseData;
+        });
+
+        // Trả về danh sách khóa học ĐÃ CÓ KÈM TIẾN ĐỘ
+        return response()->json(['data' => $coursesWithProgress]);
     }
 
     public function enrollCourse(Request $request, $courseGroupId)

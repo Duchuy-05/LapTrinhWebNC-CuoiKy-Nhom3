@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\OderController;
 use App\Http\Controllers\Api\LearnController;
+use App\Http\Controllers\Api\CommentController; // Thêm dòng này
 
 // ==========================================
 // VÙNG API CÔNG CỘNG (Không cần đăng nhập)
@@ -28,6 +29,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [FrontendApiController::class, 'register']);
 
 
+Route::get('/student/home', [StudentController::class, 'Home']);
+Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
+Route::get('/courses/{courseGroupId}/detail', [App\Http\Controllers\Api\CourseController::class, 'getPublicDetail']);
 // ==========================================
 // VÙNG API ĐƯỢC BẢO VỆ (Bắt buộc phải có Token)
 // ==========================================
@@ -56,9 +60,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Group API dành cho Học viên (Student)
     Route::prefix('student')->group(function () {
-        Route::get('/home', [StudentController::class, 'Home']);
         Route::get('/my-courses', [OderController::class, 'myCourses']);
         
         Route::get('/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
+        Route::post('/enroll/{courseGroupId}', [StudentController::class, 'enroll']);
+        Route::post('/courses/{courseGroupId}/progress', [LearnController::class, 'updateProgress']);
+        Route::post('/courses/{courseGroupId}/comment', [CommentController::class, 'addCourseReview']);
     });
 });

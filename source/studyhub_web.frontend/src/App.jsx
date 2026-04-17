@@ -10,6 +10,9 @@ import PublishedCourses from './views/PublishedCourses';
 import Home from './views/Home';
 import MyCourses from './views/MyCourses';
 import PublishedCourseViewer from './components/PublishedCourseViewer';
+import CoursePlayer from './views/CoursePlayer';
+import CourseDetail from './views/CourseDetail';
+
 function App() {
   return (
     <BrowserRouter>
@@ -22,6 +25,8 @@ function App() {
         <Route path="/student" element={<MainLayout mode="student" />}>
           <Route path="home" element={<Home />} />
           <Route path="my-courses" element={<MyCourses />} />
+          <Route path="courses/:courseId/learn" element={<CoursePlayer />} />
+          <Route path="courses/:courseId" element={<CourseDetail />} />
         </Route>
 
         {/* KHÔNG GIAN GIẢNG DẠY (Chế độ Giảng viên) */}
@@ -38,7 +43,7 @@ function App() {
 
         {/* Mặc định vào app sẽ đẩy vào không gian học tập */}
         <Route path="/" element={<Navigate to="/student/home" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/student/home" replace />} />
       </Routes>
     </BrowserRouter>
   );

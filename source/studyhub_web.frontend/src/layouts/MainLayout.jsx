@@ -4,13 +4,6 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
 export default function MainLayout({ mode }) {
-  // Menu dành cho việc Học
-  const learnMenu = [
-    { to: '/student/home', icon: '🏠', label: 'Trang chủ' },
-    { to: '/student/my-courses', icon: '📖', label: 'Khóa học của tôi' },
-  ];
-
-  // Menu dành cho việc Dạy
   const teachMenu = [
     { to: '/lecturer/dashboard', icon: '🏠', label: 'Trang chủ' },
     { to: '/lecturer/courses', icon: '📘', label: 'Khóa học' },
@@ -21,15 +14,18 @@ export default function MainLayout({ mode }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Truyền mode vào Header để nó biết đang ở chế độ nào */}
+      {/* Header luôn hiển thị */}
       <Header mode={mode} />
       
-      {/* Nạp đúng menu vào Sidebar */}
-      <Sidebar menuItems={mode === 'lecturer' ? teachMenu : learnMenu} />
+      {/* CHỈ hiển thị Sidebar nếu là chế độ Giảng viên */}
+      {mode === 'lecturer' && (
+        <Sidebar menuItems={teachMenu} />
+      )}
 
-      {/* Nội dung chính */}
-      <main className="pl-20 md:pl-64 pt-16 transition-all min-h-screen">
-        <Outlet />
+      <main className={`pt-16 transition-all min-h-screen ${mode === 'lecturer' ? 'pl-20 md:pl-64' : 'w-full'}`}>
+        <div className={mode === 'student' ? 'max-w-7xl mx-auto px-4 py-8' : ''}>
+           <Outlet />
+        </div>
       </main>
     </div>
   );

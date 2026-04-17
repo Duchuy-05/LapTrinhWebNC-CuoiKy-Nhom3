@@ -26,12 +26,14 @@ class Course extends Model
         'student_count', // Tổng số học viên đã mua
         'rating_count',  // Tổng số lượt đánh giá
         'rating_score', // Điểm đánh giá trung bình (ví dụ: 4.8)
+        'comments',
     ];
 
     // Ép kiểu dữ liệu (Casting)
     protected $casts = [
         'courseData' => 'array',
         'blocks' => 'array',
+        'comments',
         'tags' => 'string', // Có thể để array nếu bạn thiết kế tags dạng mảng
         'version' => 'integer',
         'price' => 'integer',

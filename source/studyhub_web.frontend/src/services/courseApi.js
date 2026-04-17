@@ -73,6 +73,19 @@ class CourseAPI {
 
   static async getStudentDashboard() { return apiClient.get('/student/home'); }
   static async getMyCourses() { return apiClient.get('/student/my-courses'); }
+  static async getCourseLearningContent(courseId) { return apiClient.get(`/student/courses/${courseId}/learn`); }
+  static async enrollCourse(courseId) { return apiClient.post(`/student/enroll/${courseId}`); }
+  static async updateProgress(courseId, lessonId) {
+    return apiClient.post(`/student/courses/${courseId}/progress`, { lessonId });
+  }
+  static async getCourseDetail(courseId) { 
+    return apiClient.get(`/courses/${courseId}/detail`); 
+  }
+  
+  // Gửi bình luận
+  static async submitCourseComment(courseId, data) { 
+    return apiClient.post(`/student/courses/${courseId}/comment`, data); 
+  }
 }
 
 export default CourseAPI;
