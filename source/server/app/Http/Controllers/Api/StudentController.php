@@ -13,7 +13,6 @@ class StudentController extends Controller
     public function Home(Request $request)
     {
         $userId = auth()->id();
-
         $baseQuery = Course::where('status', 'PUBLISHED');
 
         $trendingCourses = (clone $baseQuery)->orderBy('created_at', 'desc')->limit(4)->get();

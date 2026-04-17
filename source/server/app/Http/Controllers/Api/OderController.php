@@ -1,8 +1,11 @@
 <?php
 
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Course;
-
 class OderController extends Controller
 {
     public function myCourses(Request $request)

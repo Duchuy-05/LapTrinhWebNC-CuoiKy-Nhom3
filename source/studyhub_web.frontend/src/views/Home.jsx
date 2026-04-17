@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CourseAPI from '../services/courseApi';
+import CourseCard from '../components/CourseCard';
 
 export default function StudentDashboard() {
   // Banners giữ nguyên (Có thể tạo API lấy banner sau nếu muốn)
@@ -45,34 +46,6 @@ export default function StudentDashboard() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  // Component tái sử dụng cho 1 thẻ Khóa Học
-  const CourseCard = ({ course, badge }) => (
-    <div className="flex flex-col overflow-hidden transition-all bg-white border border-slate-200 rounded-2xl hover:shadow-xl hover:border-indigo-200 cursor-pointer group">
-      <div className="relative overflow-hidden bg-slate-100 h-44">
-        <img src={course.thumbnail || 'https://via.placeholder.com/500x300'} alt={course.title} className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" />
-        {badge && (
-          <span className="absolute top-3 left-3 px-2.5 py-1 text-xs font-bold text-white rounded-md shadow-sm bg-yellow-500">
-            {badge}
-          </span>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center transition-opacity opacity-0 bg-black/40 group-hover:opacity-100">
-          <button className="px-4 py-2 font-bold text-slate-900 transition-all transform translate-y-4 bg-white rounded-lg group-hover:translate-y-0 hover:bg-indigo-50">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-col flex-1 p-5">
-        <h3 className="mb-2 font-bold transition-colors line-clamp-2 text-slate-800 group-hover:text-indigo-600">
-          {course.title}
-        </h3>
-        <p className="mb-3 text-xs text-slate-500">{course.description || "Chưa có mô tả"}</p>
-        <div className="flex items-end gap-2 pt-4 mt-auto border-t border-slate-100">
-          <span className="text-lg font-extrabold text-slate-800">{formatPrice(course.price)}</span>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="w-full max-w-7xl mx-auto p-6 pb-24 space-y-12">
       
@@ -105,11 +78,11 @@ export default function StudentDashboard() {
                   <p className="mt-2 text-slate-500">Dựa trên các kỹ năng bạn đang quan tâm.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {recommendedCourses.map(course => (
-                  <CourseCard key={course.courseGroupId} course={course} badge="Gợi ý" />
+              <div className="grid grid-cols-4 gap-6">
+                {trendingCourses.map(course => (
+                  <CourseCard key={course.courseGroupId} course={course} badge="Mới" />
                 ))}
-              </div>
+            </div>
             </section>
           )}
 

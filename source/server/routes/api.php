@@ -20,7 +20,8 @@ Route::get('/courses', function () {
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [FrontendApiController::class, 'register']);
-
+Route::get('/student/home', [StudentController::class, 'Home']);
+Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
 // ==========================================
 // VÙNG API ĐƯỢC BẢO VỆ (Bắt buộc phải có Token)
 // ==========================================
@@ -30,22 +31,20 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // Group API dành cho Giảng viên (Lecturer)
     Route::prefix('lecturer/courses')->group(function () {
-        Route::get('/', [CourseController::class, 'index']); // Lấy danh sách khóa học
-        Route::post('/', [CourseController::class, 'store']); // Khởi tạo bản nháp
-        Route::get('/{courseGroupId}/draft', [CourseController::class, 'showDraft']); // Xem bản nháp
-        Route::put('/{courseGroupId}/draft', [CourseController::class, 'updateDraft']); // Sửa bản nháp
-        Route::post('/{courseGroupId}/publish', [CourseController::class, 'publish']); // Xuất bản
-        Route::post('/{courseGroupId}/unpublish', [CourseController::class, 'unpublish']); // Ngừng xuất bản
-        Route::post('/upload-video', VideoUploadController::class); // Upload video bài giảng
-        Route::post('/upload-image', ImageUploadController::class); // Upload hình ảnh minh họa
-        Route::put('/lecturer/courses/{courseGroupId}/price', [\App\Http\Controllers\Api\CourseController::class, 'updatePrice']); // Cập nhật giá khóa học
+        Route::get('/', [CourseController::class, 'index']);
+        Route::post('/', [CourseController::class, 'store']);
+        Route::get('/{courseGroupId}/draft', [CourseController::class, 'showDraft']);
+        Route::put('/{courseGroupId}/draft', [CourseController::class, 'updateDraft']);
+        Route::post('/{courseGroupId}/publish', [CourseController::class, 'publish']);
+        Route::post('/{courseGroupId}/unpublish', [CourseController::class, 'unpublish']);
+        Route::post('/upload-video', VideoUploadController::class);
+        Route::post('/upload-image', ImageUploadController::class);
+        Route::put('/lecturer/courses/{courseGroupId}/price', [\App\Http\Controllers\Api\CourseController::class, 'updatePrice']);
     });
 
     Route::prefix('student')->group(function () {
-        Route::get('/home', [StudentController::class, 'Home']);
         Route::get('/my-courses', [OderController::class, 'myCourses']);
-        Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
+        Route::post('/enroll/{courseGroupId}', [StudentController::class, 'enroll']);
     });
 });

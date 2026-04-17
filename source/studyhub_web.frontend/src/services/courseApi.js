@@ -70,6 +70,8 @@ class CourseAPI {
 
   static async getStudentDashboard() { return apiClient.get('/student/home'); }
   static async getMyCourses() { return apiClient.get('/student/my-courses'); }
+  static async getCourseLearningContent(courseId) { return apiClient.get(`/student/courses/${courseId}/learn`); }
+  static async enrollCourse(courseId) { return apiClient.post(`/student/enroll/${courseId}`); }
 }
 
 export default CourseAPI;
