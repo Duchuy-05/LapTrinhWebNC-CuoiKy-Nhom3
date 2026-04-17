@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -163,5 +164,32 @@ class CourseController extends Controller
         }
 
         return response()->json(['message' => 'Cập nhật giá thành công!']);
+    }
+
+    public function getPublicDetail(Request $request, $courseGroupId)
+    {
+        // Lấy thông tin khóa học
+        $course = Course::where('courseGroupId', $courseGroupId)->where('status', 'PUBLISHED')->first();
+        if (!$course) return response()->json(['message' => 'Không tìm thấy khóa học'], 404);
+
+        // Kiểm tra xem User có đang gửi Token không (để biết đã mua chưa)
+        $userId = auth('sanctum')->id();
+        $isEnrolled = false;
+        
+        if ($userId) {
+            $order = Order::where('user_id', $userId)
+                        ->where('course_id', $courseGroupId)
+                        ->where('status', 'SUCCESS')
+                        ->first();
+            $isEnrolled = !!$order;
+        }
+
+        $isFree = ($course->price == 0 || $course->discountPrice == 0);
+
+        return response()->json([
+            'data' => $course,
+            'isEnrolled' => $isEnrolled,
+            'isFree' => $isFree
+        ]);
     }
 }

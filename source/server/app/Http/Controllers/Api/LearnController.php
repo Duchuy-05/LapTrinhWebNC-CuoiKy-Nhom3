@@ -37,22 +37,22 @@ class LearnController extends Controller
             // (B) Chế độ học thử (Dành cho khách hoặc người chưa mua)
             $trialData = $course->courseData ?? [];
             $allowedLessonIds = [];
+            $lessonCount = 0; // Biến đếm số lượng bài học
 
-            // Lọc các bài học được đánh dấu 'isPreview'
-            foreach ($trialData as &$unit) {
-                if (isset($unit['items']) && is_array($unit['items'])) {
-                    $unit['items'] = array_filter($unit['items'], function($item) use (&$allowedLessonIds) {
-                        if (isset($item['isPreview']) && $item['isPreview'] === true) {
-                            $allowedLessonIds[] = $item['id'];
-                            return true;
+            if (is_iterable($trialData)) {
+                foreach ($trialData as $unit) {
+                    if (isset($unit['items']) && is_array($unit['items'])) {
+                        foreach ($unit['items'] as $item) {
+                            $lessonCount++;
+                            // Cho phép 2 bài đầu tiên HOẶC bài được đánh dấu isPreview = true
+                            if ($lessonCount <= 2 || (isset($item['isPreview']) && $item['isPreview'] === true)) {
+                                $allowedLessonIds[] = $item['id'];
+                            }
                         }
-                        return false;
-                    });
-                    $unit['items'] = array_values($unit['items']); // Sắp xếp lại chỉ số mảng
+                    }
                 }
             }
 
-            // Lọc data Blocks (Nội dung thực tế) chỉ giữ lại bài học được phép học thử
             $trialBlocks = [];
             if (is_array($course->blocks)) {
                 $trialBlocks = array_intersect_key($course->blocks, array_flip($allowedLessonIds));
@@ -61,9 +61,11 @@ class LearnController extends Controller
             return response()->json([
                 'data' => [
                     'title' => $course->title,
-                    'courseData' => $trialData,
+                    'courseData' => $course->courseData, 
                     'blocks' => $trialBlocks,
-                    'isTrial' => true
+                    'isTrial' => true,
+                    // Gửi thêm mảng này để Frontend biết bài nào được mở, bài nào bị khóa
+                    'allowedLessonIds' => $allowedLessonIds 
                 ],
                 'access' => 'trial'
             ]);

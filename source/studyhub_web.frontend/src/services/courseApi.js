@@ -75,6 +75,14 @@ class CourseAPI {
   static async updateProgress(courseId, lessonId) {
     return apiClient.post(`/student/courses/${courseId}/progress`, { lessonId });
   }
+  static async getCourseDetail(courseId) { 
+    return apiClient.get(`/courses/${courseId}/detail`); 
+  }
+  
+  // Gửi bình luận
+  static async submitCourseComment(courseId, data) { 
+    return apiClient.post(`/student/courses/${courseId}/comment`, data); 
+  }
 }
 
 export default CourseAPI;

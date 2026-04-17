@@ -24,6 +24,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [FrontendApiController::class, 'register']);
 Route::get('/student/home', [StudentController::class, 'Home']);
 Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
+Route::get('/courses/{courseGroupId}/detail', [App\Http\Controllers\Api\CourseController::class, 'getPublicDetail']);
 // ==========================================
 // VÙNG API ĐƯỢC BẢO VỆ (Bắt buộc phải có Token)
 // ==========================================

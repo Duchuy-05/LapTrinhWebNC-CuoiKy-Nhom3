@@ -39,6 +39,12 @@ const CourseCard = ({ course, badge }) => {
     navigate(`/student/courses/${course.courseGroupId}/learn`);
   };
 
+  // Hàm chuyển hướng đến trang Chi tiết khóa học
+  const handleGoToDetail = (e) => {
+    e.stopPropagation();
+    navigate(`/student/courses/${course.courseGroupId}`);
+  };
+
   return (
     <>
       {/* THẺ KHÓA HỌC CHÍNH */}
@@ -49,7 +55,12 @@ const CourseCard = ({ course, badge }) => {
           </span>
         )}
         
-        <div className="aspect-video overflow-hidden bg-slate-100 relative">
+        {/* THUMBNAIL: Đã thêm onClick và cursor-pointer */}
+        <div 
+          onClick={handleGoToDetail}
+          className="aspect-video overflow-hidden bg-slate-100 relative cursor-pointer"
+          title="Xem chi tiết khóa học"
+        >
           <img 
             src={course.thumbnail || 'https://via.placeholder.com/350x200?text=StudyHub'} 
             alt={course.title} 
@@ -63,7 +74,12 @@ const CourseCard = ({ course, badge }) => {
         </div>
 
         <div className="p-5 flex flex-col flex-1">
-          <h3 className="font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-indigo-600 h-12">
+          {/* TÊN KHÓA HỌC: Đã thêm onClick và cursor-pointer */}
+          <h3 
+            onClick={handleGoToDetail}
+            className="font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-indigo-600 h-12 cursor-pointer transition-colors"
+            title="Xem chi tiết khóa học"
+          >
             {course.title}
           </h3>
           <p className="text-xs text-slate-500 mb-4 flex items-center gap-1">
@@ -98,7 +114,7 @@ const CourseCard = ({ course, badge }) => {
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <button 
-                  onClick={handleGoToLearn} // Chỗ này vẫn cần kiểm tra Auth nếu vào học thử
+                  onClick={handleGoToLearn} 
                   className="py-2.5 bg-orange-50 text-orange-600 font-bold rounded-xl hover:bg-orange-100 border border-orange-200 transition-all text-sm cursor-pointer"
                 >
                   Học thử

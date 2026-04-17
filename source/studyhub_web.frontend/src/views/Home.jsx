@@ -66,7 +66,7 @@ export default function StudentDashboard() {
       </div>
 
       {isLoading ? (
-        <div className="py-20 text-center text-slate-500">Đang phân tích dữ liệu và đề xuất khóa học...</div>
+        <div className="py-20 text-center text-slate-500">Đang tải dữ liệu...</div>
       ) : (
         <>
           {/* 2. DẢI KHÓA HỌC: ĐỀ XUẤT */}
