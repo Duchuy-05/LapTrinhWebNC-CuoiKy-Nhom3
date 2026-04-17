@@ -72,6 +72,9 @@ class CourseAPI {
   static async getMyCourses() { return apiClient.get('/student/my-courses'); }
   static async getCourseLearningContent(courseId) { return apiClient.get(`/student/courses/${courseId}/learn`); }
   static async enrollCourse(courseId) { return apiClient.post(`/student/enroll/${courseId}`); }
+  static async updateProgress(courseId, lessonId) {
+    return apiClient.post(`/student/courses/${courseId}/progress`, { lessonId });
+  }
 }
 
 export default CourseAPI;

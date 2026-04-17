@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\OderController;
 use App\Http\Controllers\Api\LearnController;
+use App\Http\Controllers\Api\CommentController; // Thêm dòng này
+
 // ==========================================
 // VÙNG API CÔNG CỘNG (Không cần đăng nhập)
 // ==========================================
@@ -46,5 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('student')->group(function () {
         Route::get('/my-courses', [OderController::class, 'myCourses']);
         Route::post('/enroll/{courseGroupId}', [StudentController::class, 'enroll']);
+        Route::post('/courses/{courseGroupId}/progress', [LearnController::class, 'updateProgress']);
+        Route::post('/courses/{courseGroupId}/comment', [CommentController::class, 'addCourseReview']);
     });
 });

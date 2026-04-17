@@ -28,7 +28,7 @@ export default function Login() {
       }
       localStorage.setItem('token', data.token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
-      navigate('/lecturer/dashboard'); 
+      navigate('/student/home'); 
     } catch (error) {
       setErrorMessage('Không thể kết nối đến Server.');
     }

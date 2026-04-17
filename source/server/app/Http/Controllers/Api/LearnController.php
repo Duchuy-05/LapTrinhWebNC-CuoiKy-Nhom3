@@ -11,33 +11,28 @@ class LearnController extends Controller
 {
     public function showCourseContent($courseGroupId)
     {
-        // 1. Dùng guard 'sanctum' để nhận diện User. Khách vãng lai sẽ có $userId = null
         $userId = auth('sanctum')->id(); 
-        $isEnrolled = false;
+        $course = Course::where('courseGroupId', $courseGroupId)->where('status', 'PUBLISHED')->first();
 
-        // 2. Lấy thông tin khóa học bản PUBLISHED
-        $course = Course::where('courseGroupId', $courseGroupId)
-                        ->where('status', 'PUBLISHED')
-                        ->first();
+        if (!$course) return response()->json(['message' => 'Không tìm thấy khóa học'], 404);
 
-        if (!$course) {
-            return response()->json(['message' => 'Khóa học không tồn tại hoặc chưa xuất bản'], 404);
-        }
-
-        // 3. Nếu đã đăng nhập, kiểm tra xem đã mua chưa
+        $order = null;
         if ($userId) {
-            $isEnrolled = Order::where('user_id', $userId)
-                               ->where('course_id', $courseGroupId)
-                               ->where('status', 'SUCCESS') // Hoặc 'completed' tùy bạn quy định
-                               ->exists();
+            $order = Order::where('user_id', $userId)->where('course_id', $courseGroupId)->first();
         }
 
         $isFree = ($course->price == 0 || $course->discountPrice == 0);
+        $isEnrolled = ($order && $order->status == 'SUCCESS');
 
-        // 4. Logic phân quyền trả về nội dung
+        // Lấy danh sách bài đã học từ đơn hàng
+        $completedLessons = ($order && isset($order->completed_lessons)) ? $order->completed_lessons : [];
+
         if ($isEnrolled || $isFree) {
-            // (A) Học viên có quyền truy cập toàn bộ (Do đã mua hoặc khóa học Free)
-            return response()->json(['data' => $course, 'access' => 'full']);
+            return response()->json([
+                'data' => $course, 
+                'access' => 'full',
+                'completedLessons' => $completedLessons
+            ]);
         } else {
             // (B) Chế độ học thử (Dành cho khách hoặc người chưa mua)
             $trialData = $course->courseData ?? [];
@@ -73,5 +68,63 @@ class LearnController extends Controller
                 'access' => 'trial'
             ]);
         }
+    }
+
+    public function updateProgress(Request $request, $courseGroupId)
+    {
+        $userId = auth('sanctum')->id();
+        $lessonId = $request->input('lessonId');
+
+        if (!$userId) return response()->json(['message' => 'Yêu cầu đăng nhập'], 401);
+
+        // 1. Lấy thông tin khóa học trước để kiểm tra
+        $course = Course::where('courseGroupId', $courseGroupId)->where('status', 'PUBLISHED')->first();
+        if (!$course) return response()->json(['message' => 'Không tìm thấy khóa học'], 404);
+
+        // 2. Tìm đơn hàng (lịch sử ghi danh)
+        $order = Order::where('user_id', $userId)->where('course_id', $courseGroupId)->first();
+
+        // 3. NẾU CHƯA CÓ ĐƠN HÀNG: Xử lý tự động ghi danh cho khóa miễn phí
+        if (!$order) {
+            $isFree = ($course->price == 0 || $course->discountPrice == 0);
+            
+            if ($isFree) {
+                // Tự động tạo record ghi danh để có chỗ lưu tiến độ
+                $order = new Order();
+                $order->user_id = $userId;
+                $order->course_id = $courseGroupId;
+                $order->price_paid = 0;
+                $order->payment_method = 'Free';
+                $order->status = 'SUCCESS';
+                $order->progress = 0;
+                $order->completed_lessons = [];
+                $order->save();
+            } else {
+                // Nếu khóa có phí mà chưa mua thì mới block 403
+                return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            }
+        }
+
+        // 4. Cập nhật mảng bài học đã hoàn thành
+        $completed = $order->completed_lessons ?? [];
+        if (!in_array($lessonId, $completed)) {
+            $completed[] = $lessonId;
+            $order->completed_lessons = $completed;
+            
+            // Tính toán % tiến độ tổng quát
+            $totalLessons = 0;
+            if (is_iterable($course->courseData)) {
+                foreach ($course->courseData as $unit) {
+                    if (isset($unit['items']) && is_array($unit['items'])) {
+                        $totalLessons += count($unit['items']);
+                    }
+                }
+            }
+            
+            $order->progress = ($totalLessons > 0) ? round((count($completed) / $totalLessons) * 100) : 0;
+            $order->save();
+        }
+
+        return response()->json(['success' => true, 'completedLessons' => $completed, 'progress' => $order->progress]);
     }
 }

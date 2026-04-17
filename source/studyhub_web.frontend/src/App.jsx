@@ -11,6 +11,7 @@ import Home from './views/Home';
 import MyCourses from './views/MyCourses';
 import PublishedCourseViewer from './components/PublishedCourseViewer';
 import CoursePlayer from './views/CoursePlayer';
+import CourseDetail from './views/CourseDetail';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="home" element={<Home />} />
           <Route path="my-courses" element={<MyCourses />} />
           <Route path="courses/:courseId/learn" element={<CoursePlayer />} />
+          <Route path="courses/:courseId" element={<CourseDetail />} />
         </Route>
 
         {/* KHÔNG GIAN GIẢNG DẠY (Chế độ Giảng viên) */}
