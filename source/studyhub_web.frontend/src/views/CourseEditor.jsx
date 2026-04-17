@@ -12,11 +12,10 @@ export default function CourseEditor() {
   const [courseData, setCourseData] = useState([]);
   const [activeItem, setActiveItem] = useState(null);
   const [expandedUnits, setExpandedUnits] = useState({});
-  
-  // 1. object {} để lưu Block theo từng ID bài học riêng biệt
   const [blocksByLesson, setBlocksByLesson] = useState({});
-  
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
+  
+  const [openUnitMenu, setOpenUnitMenu] = useState(null);
 
   const toggleUnit = (unitId) => setExpandedUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
   
@@ -33,10 +32,48 @@ export default function CourseEditor() {
     const title = window.prompt("Nhập tên bài học mới:");
     if (title?.trim()) {
       const newLessonId = `l${Date.now()}`;
-      setCourseData(courseData.map(u => u.id === unitId ? { ...u, items: [...u.items, { id: newLessonId, title }] } : u));
-      // Tự động gán mảng rỗng cho bài học mới để tránh lỗi
+      setCourseData(courseData.map(u => u.id === unitId ? { ...u, items: [...u.items, { id: newLessonId, title, isPreview: false }] } : u));
       setBlocksByLesson(prev => ({ ...prev, [newLessonId]: [] }));
     }
+  };
+
+  // --- MENU 3 CHẤM ---
+  const handleEditUnit = (e, unitId, currentTitle) => {
+    e.stopPropagation(); 
+    const newTitle = window.prompt("Sửa tên Unit:", currentTitle);
+    if (newTitle && newTitle.trim()) {
+      setCourseData(courseData.map(u => u.id === unitId ? { ...u, title: newTitle.trim() } : u));
+    }
+    setOpenUnitMenu(null); 
+  };
+
+  const handleDeleteUnit = (e, unitId) => {
+    e.stopPropagation(); 
+    if (window.confirm("Bạn có chắc chắn muốn xóa Unit này? Toàn bộ bài học bên trong cũng sẽ bị xóa vĩnh viễn.")) {
+      setCourseData(courseData.filter(u => u.id !== unitId));
+      if (activeItem && !courseData.filter(u => u.id !== unitId).some(u => u.items.some(i => i.id === activeItem.id))) {
+        setActiveItem(null);
+      }
+    }
+    setOpenUnitMenu(null); 
+  };
+
+  const toggleMenu = (e, unitId) => {
+    e.stopPropagation();
+    setOpenUnitMenu(openUnitMenu === unitId ? null : unitId);
+  };
+
+  // --- CHUYỂN ĐỔI CHẾ ĐỘ HỌC THỬ (FREE PREVIEW) ---
+  const handleTogglePreview = () => {
+    const newValue = !activeItem.isPreview;
+    setActiveItem(prev => ({ ...prev, isPreview: newValue }));
+    
+    setCourseData(prevData => prevData.map(unit => ({
+      ...unit,
+      items: unit.items.map(item => 
+        item.id === activeItem.id ? { ...item, isPreview: newValue } : item
+      )
+    })));
   };
 
   useEffect(() => {
@@ -67,8 +104,6 @@ export default function CourseEditor() {
           setActiveItem(null);
         }
 
-        // 2. LOGIC TƯƠNG THÍCH NGƯỢC
-        // Nếu DB cũ đang lưu mảng array, ta nhét tạm nó vào bài học đầu tiên để không mất data.
         let parsedBlocks = draft.blocks || {};
         if (Array.isArray(parsedBlocks)) {
           if (parsedBlocks.length > 0 && dbCourseData.length > 0 && dbCourseData[0].items.length > 0) {
@@ -85,9 +120,7 @@ export default function CourseEditor() {
       }
     };
 
-    if (courseId) {
-      fetchDraftData();
-    }
+    if (courseId) fetchDraftData();
   }, [courseId]);
 
   const handleThumbnailUpload = async (e) => {
@@ -100,8 +133,7 @@ export default function CourseEditor() {
       const imageUrl = response.data.imageUrl;
       setCourseDetails({ ...courseDetails, thumbnail: imageUrl });
     } catch (error) {
-      console.error("Lỗi tải ảnh:", error);
-      alert("Không thể tải ảnh lên. Vui lòng kiểm tra lại định dạng hoặc dung lượng!");
+      alert("Không thể tải ảnh lên. Vui lòng kiểm tra lại!");
     } finally {
       setIsUploadingThumb(false);
     }
@@ -117,7 +149,6 @@ export default function CourseEditor() {
         price: Number(courseDetails.price) || 0,
         discountPrice: Number(courseDetails.discountPrice) || 0,
         courseData: courseData || [], 
-        // 3. Lưu toàn bộ Object chứa các block của tất cả bài học
         blocks: blocksByLesson || {} 
       };
 
@@ -125,40 +156,77 @@ export default function CourseEditor() {
       alert("Đã lưu bản nháp thành công!");
       navigate('/lecturer/courses');
     } catch (error) {
-      console.error("Lỗi khi lưu bản nháp:", error.response?.data);
-      alert("Lưu thất bại: " + (error.response?.data?.message || "Vui lòng xem chi tiết lỗi ở F12 -> Console"));
+      alert("Lưu thất bại!");
     }
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-slate-50 border-t overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] bg-slate-50 border-t overflow-hidden relative">
       
+      {openUnitMenu && (
+        <div className="fixed inset-0 z-10" onClick={() => setOpenUnitMenu(null)}></div>
+      )}
+
       {/* CỘT TRÁI */}
-      <div className="flex flex-col w-1/5 bg-white border-r shadow-sm transition-all duration-300">
+      <div className="flex flex-col w-1/5 bg-white border-r shadow-sm transition-all duration-300 z-20">
+        
         <div className="flex items-center justify-between p-4 font-bold border-b bg-slate-50 text-slate-700 text-sm">
-          <span>Nội dung</span>
-          <button onClick={handleAddUnit} className="px-2 py-1 text-[10px] font-semibold text-blue-600 bg-blue-100 rounded hover:bg-blue-600 hover:text-white transition-all">+ Unit</button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => navigate('/lecturer/courses')} 
+              className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors cursor-pointer active:scale-95"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span>Nội dung</span>
+          </div>
+          <button onClick={handleAddUnit} className="px-2 py-1 text-[10px] font-semibold text-blue-600 bg-blue-100 rounded hover:bg-blue-600 hover:text-white transition-all cursor-pointer">+ Unit</button>
         </div>
+        
         <div className="flex-1 p-4 overflow-y-auto">
-          {courseData.length === 0 && (
-            <p className="text-xs text-slate-400 text-center mt-10">Chưa có nội dung.</p>
-          )}
+          {courseData.length === 0 && <p className="text-xs text-slate-400 text-center mt-10">Chưa có nội dung.</p>}
           {courseData.map(unit => (
-            <div key={unit.id} className="mb-3 overflow-hidden border rounded">
+            <div key={unit.id} className="mb-3 overflow-visible border rounded relative">
+              
               <div onClick={() => toggleUnit(unit.id)} className="flex items-center justify-between p-3 text-xs font-medium transition-colors cursor-pointer bg-slate-100 hover:bg-slate-200 group">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pr-2">
                   <span className="w-4 text-[10px] text-slate-400">{expandedUnits[unit.id] ? '▼' : '▶'}</span>
-                  <span>{unit.title}</span>
+                  <span className="font-bold text-slate-700">{unit.title}</span>
+                </div>
+
+                <div className="relative">
+                  <button 
+                    onClick={(e) => toggleMenu(e, unit.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-300 rounded transition-all cursor-pointer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                  </button>
+
+                  {openUnitMenu === unit.id && (
+                    <div className="absolute right-0 top-6 mt-1 w-28 bg-white border border-slate-200 shadow-xl rounded-md overflow-hidden z-50">
+                      <button onClick={(e) => handleEditUnit(e, unit.id, unit.title)} className="flex items-center gap-2 w-full text-left px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">Đổi tên</button>
+                      <button onClick={(e) => handleDeleteUnit(e, unit.id)} className="flex items-center gap-2 w-full text-left px-3 py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 transition-colors">Xóa Unit</button>
+                    </div>
+                  )}
                 </div>
               </div>
+
               {expandedUnits[unit.id] && (
-                <div className="bg-white">
+                <div className="bg-white pb-2">
                   {unit.items.map(item => (
-                    <div key={item.id} onClick={() => setActiveItem(item)} className={`p-2.5 pl-8 text-xs cursor-pointer hover:bg-blue-50 transition-all ${activeItem?.id === item.id ? 'bg-blue-100 border-l-4 border-blue-600 font-medium' : ''}`}>
-                      {item.title}
+                    <div 
+                      key={item.id} 
+                      onClick={() => setActiveItem(item)} 
+                      className={`flex items-center justify-between p-2.5 pl-8 pr-4 text-xs cursor-pointer hover:bg-blue-50 transition-all ${activeItem?.id === item.id ? 'bg-blue-100 border-l-4 border-blue-600 font-medium' : ''}`}
+                    >
+                      <span className="line-clamp-1">{item.title}</span>
+                      {/* Hiển thị Badge FREE nếu đang bật Học Thử */}
+                      {item.isPreview && <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded shadow-sm font-bold ml-2 shrink-0">FREE</span>}
                     </div>
                   ))}
-                  <div onClick={() => handleAddLesson(unit.id)} className="p-2 pl-8 text-[10px] font-medium text-blue-500 cursor-pointer hover:bg-slate-50">+ Thêm bài học...</div>
+                  <div onClick={() => handleAddLesson(unit.id)} className="p-2 pl-8 mt-1 text-[10px] font-bold text-blue-500 cursor-pointer hover:bg-slate-50">+ Thêm bài học...</div>
                 </div>
               )}
             </div>
@@ -166,16 +234,40 @@ export default function CourseEditor() {
         </div>
       </div>
 
-      {/* CỘT GIỮA: TRÌNH SOẠN THẢO */}
-      <div className="flex-1 flex flex-col border-r shadow-inner bg-white overflow-hidden transition-all duration-300">
+      {/* CỘT GIỮA: TRÌNH SOẠN THẢO CÓ THANH CÔNG CỤ */}
+      <div className="flex-1 flex flex-col border-r shadow-inner bg-white overflow-hidden transition-all duration-300 z-0">
         {activeItem ? (
-          <BlockEditor 
-            lessonTitle={activeItem.title} 
-            // 4. Chỉ truyền Block của riêng bài học đang được chọn
-            blocks={blocksByLesson[activeItem.id] || []} 
-            // Khi BlockEditor thay đổi, chỉ lưu vào đúng ID của bài học đó
-            setBlocks={(newBlocks) => setBlocksByLesson({...blocksByLesson, [activeItem.id]: newBlocks})} 
-          />
+          <div className="flex flex-col h-full">
+            
+            {/* THANH CÔNG CỤ: NÚT BẬT TẮT CHẾ ĐỘ HỌC THỬ */}
+            <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-b border-slate-200 shrink-0">
+              <span className="text-sm font-bold text-slate-500">Cài đặt bài học:</span>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <span className={`text-sm font-bold transition-colors ${activeItem.isPreview ? 'text-green-600' : 'text-slate-400 group-hover:text-blue-600'}`}>
+                  Mở khóa "Free"
+                </span>
+                <div className="relative">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={activeItem.isPreview || false}
+                    onChange={handleTogglePreview}
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500 shadow-inner"></div>
+                </div>
+              </label>
+            </div>
+
+            {/* TRÌNH SOẠN THẢO */}
+            <div className="flex-1 overflow-y-auto">
+              <BlockEditor 
+                lessonTitle={activeItem.title} 
+                blocks={blocksByLesson[activeItem.id] || []} 
+                setBlocks={(newBlocks) => setBlocksByLesson({...blocksByLesson, [activeItem.id]: newBlocks})} 
+              />
+            </div>
+
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 font-medium space-y-2">
             <span className="text-4xl opacity-20">📝</span>
@@ -185,7 +277,7 @@ export default function CourseEditor() {
       </div>
 
       {/* CỘT PHẢI: THIẾT LẬP KHÓA HỌC */}
-      <div className={`${isRightSidebarOpen ? 'w-1/5' : 'w-12'} transition-all duration-300 flex bg-white shadow-sm border-l overflow-hidden`}>
+      <div className={`${isRightSidebarOpen ? 'w-1/5' : 'w-12'} transition-all duration-300 flex bg-white shadow-sm border-l overflow-hidden z-0`}>
         <div className="w-12 border-r flex flex-col items-center py-4 bg-slate-50 shrink-0">
           <button onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)} className="w-8 h-8 flex items-center justify-center bg-white border rounded-full shadow-sm hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-90">
             {isRightSidebarOpen ? '→' : '←'}
@@ -199,7 +291,6 @@ export default function CourseEditor() {
 
         {isRightSidebarOpen && (
           <div className="flex-1 p-5 space-y-6 overflow-y-auto">
-            {/* Các trường nhập liệu cấu hình khóa học giữ nguyên như cũ... */}
             <div>
               <label className="block mb-2 text-sm font-bold text-slate-600">Tên khóa học</label>
               <input type="text" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" value={courseDetails.title} onChange={(e) => setCourseDetails({...courseDetails, title: e.target.value})} />

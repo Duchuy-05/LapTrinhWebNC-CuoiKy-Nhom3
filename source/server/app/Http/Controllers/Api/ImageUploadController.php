@@ -15,7 +15,7 @@ class ImageUploadController extends Controller
     {
         // 1. Kiểm tra dữ liệu (Giới hạn 2MB cho ảnh)
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', 
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048', 
         ]);
 
         try {

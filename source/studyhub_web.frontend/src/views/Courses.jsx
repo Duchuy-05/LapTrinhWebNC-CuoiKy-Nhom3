@@ -15,8 +15,45 @@ const Courses = () => {
     try {
       setIsLoading(true);
       const response = await CourseAPI.getLecturerCourses();
-      const drafts = (response.data.data || []).filter(c => c.status !== 'PUBLISHED');
-      setCourses(drafts);
+      const allCourses = response.data.data || [];
+      
+      // 1. TÌM DANH SÁCH CÁC KHÓA HỌC ĐANG ĐƯỢC XUẤT BẢN
+      const publishedGroupIds = allCourses
+        .filter(c => c.status === 'PUBLISHED')
+        .map(c => c.courseGroupId);
+
+      // 2. GOM NHÓM ĐỂ LOẠI BỎ THẺ TRÙNG LẶP
+      const uniqueCoursesMap = new Map();
+
+      // Hàm đánh trọng số ưu tiên để chọn thẻ hiển thị ra ngoài màn hình: 
+      // Ưu tiên hiện UNPUBLISHED > DRAFT > ARCHIVED
+      const getStatusWeight = (status) => {
+        if (status === 'UNPUBLISHED') return 3;
+        if (status === 'DRAFT') return 2;
+        return 1; 
+      };
+
+      allCourses.forEach(course => {
+        const groupId = course.courseGroupId;
+
+        // Bỏ qua luôn các khóa đang Live (sẽ nằm ở tab PublishedCourses)
+        if (publishedGroupIds.includes(groupId)) return;
+
+        // Nếu Map chưa có ID này, thì ném nó vào
+        if (!uniqueCoursesMap.has(groupId)) {
+          uniqueCoursesMap.set(groupId, course);
+        } else {
+          // Nếu đã có ID này rồi (tức là bị trùng), thì so sánh xem thằng nào có status đáng để hiện hơn
+          const existingCourse = uniqueCoursesMap.get(groupId);
+          if (getStatusWeight(course.status) > getStatusWeight(existingCourse.status)) {
+            uniqueCoursesMap.set(groupId, course);
+          }
+        }
+      });
+
+      // Lấy toàn bộ values từ Map chuyển thành Array để Render
+      setCourses(Array.from(uniqueCoursesMap.values()));
+      
     } catch (error) {
       console.error("Lỗi:", error);
     } finally {
@@ -24,16 +61,34 @@ const Courses = () => {
     }
   };
 
-  const handleAddNewCourse = async () => {
+const handleAddNewCourse = async () => {
     const title = window.prompt("Nhập tên khóa học mới:");
     if (title && title.trim() !== "") {
       try {
         const response = await CourseAPI.createDraft(title.trim());
-        const newCourseGroupId = response.data.data.courseGroupId;
+        
+        // 1. IN RA CONSOLE ĐỂ BẮT BỆNH BACKEND TRẢ VỀ CÁI GÌ
+        console.log("=== DỮ LIỆU BACKEND TRẢ VỀ ===", response.data);
+        
+        // 2. QUÉT TÌM ID BẰNG MỌI GIÁ (Hỗ trợ nhiều cấu trúc JSON khác nhau)
+        const newCourseGroupId = 
+          response.data?.courseGroupId ||         // Nếu backend trả ở ngoài cùng (Code mới)
+          response.data?.data?.courseGroupId ||   // Nếu backend bọc trong data (Code cũ)=
+          response.data?.data?._id ||             // Nếu backend trả thẳng ID của MongoDB
+          response.data?._id;
+
+        // 3. NẾU VẪN KHÔNG TÌM THẤY THÌ BÁO LỖI CHI TIẾT RA MÀN HÌNH
+        if (!newCourseGroupId) {
+          alert(`Lỗi: Backend KHÔNG trả về ID khóa học!\n\nChi tiết Backend gửi về:\n${JSON.stringify(response.data)}\n\n(Hãy mở Console F12 để xem chi tiết hơn)`);
+          return;
+        }
+
+        // 4. Nếu có ID thì chuyển trang mượt mà
         navigate(`/lecturer/courses/${newCourseGroupId}/edit`);
+        
       } catch (error) {
-        alert("Có lỗi xảy ra khi tạo khóa học!");
-        console.error(error);
+        alert("Có lỗi xảy ra khi gọi API tạo khóa học!");
+        console.error("Lỗi API chi tiết:", error);
       }
     }
   };
@@ -47,7 +102,7 @@ const Courses = () => {
       try {
         await CourseAPI.publishCourse(courseGroupId);
         alert("Xuất bản thành công!");
-        fetchCourses(); 
+        navigate('/lecturer/published-courses'); 
       } catch (error) {
         alert("Lỗi khi xuất bản!");
         console.error(error);
@@ -75,6 +130,10 @@ const Courses = () => {
 
       {isLoading ? (
         <p className="text-slate-500">Đang tải dữ liệu...</p>
+      ) : courses.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
+          <p className="text-slate-400">Bạn chưa có bản nháp nào.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {courses.map(course => (
@@ -82,7 +141,9 @@ const Courses = () => {
               {/* Hình ảnh */}
               <div className="relative h-44 overflow-hidden bg-slate-100 shrink-0">
                 <img src={course.image || course.thumbnail || 'https://via.placeholder.com/300x200'} alt={course.title} className="object-cover w-full h-full" />
-                <span className={`absolute top-4 -right-10 px-10 py-1.5 text-xs font-bold text-white rotate-45 shadow-sm ${course.status === 'PUBLISHED' ? 'bg-green-500' : 'bg-slate-700'}`}>
+                
+                {/* ĐỔI MÀU BADGE: UNPUBLISHED thì hiện màu Cam cho nổi bật */}
+                <span className={`absolute top-4 -right-10 px-10 py-1.5 text-[10px] uppercase font-bold text-white rotate-45 shadow-sm ${course.status === 'UNPUBLISHED' ? 'bg-amber-500' : 'bg-slate-700'}`}>
                   {course.status}
                 </span>
               </div>
@@ -99,7 +160,6 @@ const Courses = () => {
                     {course.price > 0 ? (
                       <>
                         <span className="text-lg font-extrabold text-blue-600 leading-tight">
-                          {/* Logic mới: Giá bán = Giá gốc - Giá giảm */}
                           {Number(course.price - (course.discountPrice || 0)).toLocaleString()} đ
                         </span>
                         {course.discountPrice > 0 && course.discountPrice < course.price && (
@@ -138,14 +198,12 @@ const Courses = () => {
                       Chỉnh sửa
                     </button>
 
-                    {course.status !== 'PUBLISHED' && (
-                      <button 
-                        onClick={() => handlePublish(course.courseGroupId)}
-                        className="w-full py-2.5 font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-sm shadow-red-200"
-                      >
-                        Xuất bản
-                      </button>
-                    )}
+                    <button 
+                      onClick={() => handlePublish(course.courseGroupId)}
+                      className="w-full py-2.5 font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-sm shadow-red-200"
+                    >
+                      Xuất bản
+                    </button>
                   </div>
                 </div>
 

@@ -1,29 +1,34 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Services\CourseAccessService; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
+    protected $accessService;
+
+    // Inject Service vào Controller
+    public function __construct(CourseAccessService $accessService)
+    {
+        $this->accessService = $accessService;
+    }
+
+    /**
+     * Lấy danh sách khóa học CỦA GIẢNG VIÊN ĐANG ĐĂNG NHẬP
+     */
     public function index()
     {
-        // Lấy các khóa học do giảng viên này tạo ra
         $courses = Course::where('authorId', auth()->id())
                          ->orderBy('created_at', 'desc')
                          ->get();
         
-        // Tối ưu hóa dữ liệu trả về cho danh sách
         $courses->transform(function ($course) {
-            // Đếm số lượng Unit có trong khóa học
             $course->unit_count = is_array($course->courseData) ? count($course->courseData) : 0;
-            
-            // Xóa mảng blocks để tránh payload API bị quá nặng khi tải danh sách
-            unset($course->blocks); 
-            
+            unset($course->blocks); // Tối ưu payload
             return $course;
         });
                          
@@ -31,7 +36,7 @@ class CourseController extends Controller
     }
 
     /**
-     * 1. Khởi tạo một khóa học mới (Luôn tạo bản DRAFT đầu tiên)
+     * 1. Khởi tạo một khóa học mới (DRAFT)
      */
     public function store(Request $request)
     {
@@ -44,7 +49,7 @@ class CourseController extends Controller
             'title' => $request->input('title', 'Khóa học mới'),
             'courseData' => [],
             'blocks' => [],
-            'authorId' => auth()->id(),
+            'authorId' => auth()->id(), // Bắt buộc lưu ID người tạo
             'price' => 0,
             'discountPrice' => 0
         ]);
@@ -53,36 +58,42 @@ class CourseController extends Controller
             return response()->json(['message' => 'Tạo bản nháp thất bại'], 500);
         }
 
-        return response()->json(['message' => 'Tạo bản nháp thành công', 'data' => $course], 201);
+        return response()->json([
+            'message' => 'Tạo bản nháp thành công', 
+            'courseGroupId' => $courseGroupId,
+            'data' => $course
+        ], 201);
     }
 
     /**
-     * 2. Lấy thông tin bản nháp để soạn thảo
+     * 2. Lấy thông tin bản nháp (CHỈ GIẢNG VIÊN ĐÓ MỚI ĐƯỢC LẤY)
      */
     public function showDraft($courseGroupId)
     {
         $draft = Course::where('courseGroupId', $courseGroupId)
                        ->where('status', 'DRAFT')
+                       ->where('authorId', auth()->id()) // Chỉ chủ khóa học mới được xem
                        ->first();
 
         if (!$draft) {
-            return response()->json(['message' => 'Không tìm thấy bản nháp'], 404);
+            return response()->json(['message' => 'Không tìm thấy bản nháp hoặc bạn không có quyền'], 404);
         }
 
         return response()->json(['data' => $draft]);
     }
 
     /**
-     * 3. Lưu bản nháp (Ghi đè liên tục khi soạn thảo)
+     * 3. Lưu bản nháp (CHỈ GIẢNG VIÊN ĐÓ MỚI ĐƯỢC LƯU)
      */
     public function updateDraft(Request $request, $courseGroupId)
     {
         $draft = Course::where('courseGroupId', $courseGroupId)
                        ->where('status', 'DRAFT')
+                       ->where('authorId', auth()->id()) // BẢO MẬT
                        ->first();
 
         if (!$draft) {
-            return response()->json(['message' => 'Không tìm thấy bản nháp'], 404);
+            return response()->json(['message' => 'Không tìm thấy bản nháp hoặc bạn không có quyền'], 404);
         }
 
         $draft->update($request->only([
@@ -93,20 +104,25 @@ class CourseController extends Controller
     }
 
     /**
-     * 4. XUẤT BẢN KHÓA HỌC (Logic Clone Document)
+     * 4. XUẤT BẢN KHÓA HỌC
      */
     public function publish($courseGroupId)
     {
-        $draft = Course::where('courseGroupId', $courseGroupId)->where('status', 'DRAFT')->first();
+        $draft = Course::where('courseGroupId', $courseGroupId)
+                       ->where('status', 'DRAFT')
+                       ->where('authorId', auth()->id()) // BẢO MẬT
+                       ->first();
 
         if (!$draft) {
             return response()->json(['message' => 'Không tìm thấy bản nháp để xuất bản'], 404);
         }
 
+        // Đưa bản PUBLISHED cũ về ARCHIVED
         Course::where('courseGroupId', $courseGroupId)
               ->where('status', 'PUBLISHED')
               ->update(['status' => 'ARCHIVED']);
 
+        // Clone bản nháp thành bản chính thức
         $published = $draft->replicate(); 
         $published->status = 'PUBLISHED';
         $published->save();
@@ -120,18 +136,24 @@ class CourseController extends Controller
     }
 
     /**
-     * 5. Ngừng xuất bản (Hạ xuống)
+     * 5. Ngừng xuất bản
      */
     public function unpublish($courseGroupId)
     {
         $updated = Course::where('courseGroupId', $courseGroupId)
-              ->where('status', 'PUBLISHED')
-              ->update(['status' => 'UNPUBLISHED']);
+                         ->where('status', 'PUBLISHED')
+                         ->where('authorId', auth()->id()) // BẢO MẬT
+                         ->update(['status' => 'UNPUBLISHED']);
+
+        if (!$updated) {
+            return response()->json(['message' => 'Thao tác thất bại'], 400);
+        }
 
         return response()->json(['message' => 'Đã ngừng xuất bản khóa học']);
     }
+
     /**
-     * 6. Cập nhật nhanh Giá bán cho khóa học (Cập nhật cả bản Live và Draft)
+     * 6. Cập nhật giá
      */
     public function updatePrice(Request $request, $courseGroupId)
     {
@@ -140,28 +162,82 @@ class CourseController extends Controller
             'discountPrice' => 'required|numeric|min:0',
         ]);
 
-        // Cập nhật cho bản PUBLISHED (Để thay đổi hiển thị ngay lập tức cho học viên)
-        $publishedCourse = Course::where('courseGroupId', $courseGroupId)
-                                 ->where('status', 'PUBLISHED')
-                                 ->first();
-        if ($publishedCourse) {
-            $publishedCourse->update([
-                'price' => $request->price,
-                'discountPrice' => $request->discountPrice
-            ]);
+        // Sử dụng authorId để tránh người khác dùng postman đổi giá khóa học (ác)
+        $courses = Course::where('courseGroupId', $courseGroupId)
+                         ->whereIn('status', ['PUBLISHED', 'DRAFT'])
+                         ->where('authorId', auth()->id())
+                         ->get();
+
+        if ($courses->isEmpty()) {
+            return response()->json(['message' => 'Không có quyền cập nhật'], 403);
         }
 
-        // Cập nhật luôn cho bản DRAFT (Để lần xuất bản sau không bị đè mất giá mới)
-        $draftCourse = Course::where('courseGroupId', $courseGroupId)
-                             ->where('status', 'DRAFT')
-                             ->first();
-        if ($draftCourse) {
-            $draftCourse->update([
+        foreach ($courses as $course) {
+            $course->update([
                 'price' => $request->price,
                 'discountPrice' => $request->discountPrice
             ]);
         }
 
         return response()->json(['message' => 'Cập nhật giá thành công!']);
+    }
+
+    /**
+     * =========================================================================
+     * CÁC API DÀNH CHO VIỆC HIỂN THỊ KHÓA HỌC (ĐÃ TÁCH BIỆT LOGIC BẢO MẬT)
+     * =========================================================================
+     */
+
+    /**
+     * 7A. Xem khóa học DÀNH CHO GIẢNG VIÊN (Lấy full toàn bộ data)
+     */
+    public function showPublishedForLecturer($courseGroupId)
+    {
+        $published = Course::where('courseGroupId', $courseGroupId)
+                           ->where('status', 'PUBLISHED')
+                           ->where('authorId', auth()->id()) // Giảng viên chỉ được xem bản full của chính họ
+                           ->first();
+
+        if (!$published) {
+            return response()->json(['message' => 'Không tìm thấy khóa học đã xuất bản'], 404);
+        }
+
+        return response()->json(['data' => $published]);
+    }
+
+    /**
+     * 7B. Xem khóa học DÀNH CHO HỌC VIÊN (Đi qua lớp bảo vệ CourseAccessService)
+     * API này nên được bọc bởi middleware auth:sanctum (nếu user đã đăng nhập) 
+     * hoặc public (nếu cho khách xem giới thiệu)
+     */
+    public function showPublishedForStudent($courseGroupId, Request $request)
+    {
+        // Học viên thì không cần check authorId
+        $published = Course::where('courseGroupId', $courseGroupId)
+                           ->where('status', 'PUBLISHED')
+                           ->first();
+
+        if (!$published) {
+            return response()->json(['message' => 'Khóa học không tồn tại hoặc chưa xuất bản'], 404);
+        }
+
+        $user = $request->user('sanctum'); // Lấy user hiện tại 
+
+        // ĐƯA DATA QUA "MÁY QUÉT" ĐỂ CẮT XÉN PHẦN BỊ KHÓA
+        $safeData = $this->accessService->getSanitizedCourseData($published, $user);
+
+        return response()->json([
+            'data' => [
+                'id' => $published->id,
+                'courseGroupId' => $published->courseGroupId,
+                'title' => $published->title,
+                'price' => $published->price,
+                'discountPrice' => $published->discountPrice,
+                'rating_score' => $published->rating_score ?? 0,
+                'student_count' => $published->student_count ?? 0,
+                // Trả về courseData đã được lọc sạch sẽ
+                'courseData' => $safeData 
+            ]
+        ]);
     }
 }

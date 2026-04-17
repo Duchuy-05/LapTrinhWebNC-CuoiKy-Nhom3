@@ -109,7 +109,7 @@ const PublishedCourses = () => {
                   <div className="space-y-2">
                     <button 
                       className="w-full py-2.5 font-bold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors cursor-pointer"
-                      onClick= {() => navigate(`/lecturer/courses/${course.courseGroupId}/view`) }
+                      onClick= {() => navigate(`/lecturer/published-courses/${course.courseGroupId}/view`) }
                     >
                       Xem trang học tập
                     </button>

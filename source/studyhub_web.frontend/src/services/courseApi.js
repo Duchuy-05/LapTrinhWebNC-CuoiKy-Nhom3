@@ -1,3 +1,4 @@
+// trang gọi API liên quan đến Course của FrontEnd (bao gồm draft và published)
 import axios from 'axios';
 
 // 1. Khởi tạo instance của axios
@@ -40,13 +41,15 @@ apiClient.interceptors.response.use(
 
 // Class CourseAPI giữ nguyên như cũ
 class CourseAPI {
-  static async getLecturerCourses() { return apiClient.get('/lecturer/courses'); }
-  static async createDraft(title) { return apiClient.post('/lecturer/courses', { title }); }
-  static async getDraft(courseGroupId) { return apiClient.get(`/lecturer/courses/${courseGroupId}/draft`); }
-  static async updateDraft(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/draft`, data); }
-  static async publishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/publish`); }
-  static async unpublishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/unpublish`); }
-  static async updateCoursePrice(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/price`, data); }
+  static async getLecturerCourses() { return apiClient.get('/lecturer/courses'); } // Lấy tất cả khóa học của giảng viên (bao gồm cả draft và published)
+  static async createDraft(title) { return apiClient.post('/lecturer/courses', { title }); } // Tạo khóa học mới ở trạng thái draft với tiêu đề mặc định
+  static async getDraft(courseGroupId) { return apiClient.get(`/lecturer/courses/${courseGroupId}/draft`); } // Lấy chi tiết khóa học ở trạng thái draft (dùng để edit)
+  static async updateDraft(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/draft`, data); } // Cập nhật thông tin khóa học ở trạng thái draft
+  static async publishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/publish`); } // Xuất bản khóa học từ draft sang published
+  static async unpublishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/unpublish`); } // Hủy xuất bản khóa học để đưa về draft
+  static async updateCoursePrice(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/price`, data); } // Cập nhật giá khóa học (áp dụng cho cả draft và published)
+  static async getPublishedCourse(courseGroupId) { return apiClient.get(`/lecturer/courses/${courseGroupId}/published`); }
+  
   static async uploadVideo(file) {
     const formData = new FormData(); // Tạo một chiếc "hộp" chuyên dụng để chứa file là FormData.
     formData.append('video', file); // Nhét cái file đó vào hộp (formData.append()).

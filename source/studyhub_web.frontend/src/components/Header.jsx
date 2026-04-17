@@ -12,7 +12,6 @@ export default function CommonHeader({ mode }) {
     if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
-  // ĐÃ SỬA LỖI Ở ĐÂY: So sánh với 'student' thay vì 'learn'
   const toggleMode = () => {
     if (mode === 'student') {
       navigate('/lecturer/dashboard'); // Đang ở Học viên -> Chuyển sang Giảng viên
@@ -30,7 +29,7 @@ export default function CommonHeader({ mode }) {
 
   return (
     <header className="fixed top-0 right-0 left-0 h-16 bg-white border-b border-slate-200 z-50 flex items-center justify-between px-6 shadow-sm">
-      {/* TRÁI: Logo (ĐÃ SỬA link điều hướng về /student/dashboard) */}
+      {/* TRÁI: Logo (link điều hướng về /student/dashboard) */}
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/student/dashboard')}>
         <img src={StudyHubLogo} alt="Logo" className="w-10 h-10 rounded-lg" />
         <span className="text-xl font-black text-blue-600 tracking-tight">StudyHub</span>
