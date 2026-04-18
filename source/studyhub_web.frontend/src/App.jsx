@@ -12,6 +12,7 @@ import MyCourses from './views/MyCourses';
 import PublishedCourseViewer from './components/PublishedCourseViewer';
 import CoursePlayer from './views/CoursePlayer';
 import CourseDetail from './views/CourseDetail';
+import Statistics from './views/Statistics';
 
 function App() {
   return (
@@ -36,7 +37,7 @@ function App() {
           <Route path="courses/:courseId/edit" element={<CourseEditor />} />
           <Route path="published-courses" element={<PublishedCourses />} />
           <Route path="students" element={<div className="p-8">Quản lý học viên của tôi</div>} />
-          <Route path="statistics" element={<div className="p-8">Thống kê</div>} />
+          <Route path="statistics" element={<Statistics />} />
           <Route path="/lecturer/courses/:courseId/edit" element={<CourseEditor />} />
           <Route path="/lecturer/published-courses/:courseId/view" element={<PublishedCourseViewer />} />
         </Route>

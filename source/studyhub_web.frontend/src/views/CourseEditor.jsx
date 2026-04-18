@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BlockEditor from '../components/BlockEditor'; 
 import CourseAPI from '../services/courseApi'; 
-
 export default function CourseEditor() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -139,15 +138,26 @@ export default function CourseEditor() {
     }
   };
 
-  const handleSaveDraft = async () => {
+const handleSaveDraft = async () => {
+    // 1. LẤY GIÁ TRỊ VÀ KIỂM TRA LOGIC GIÁ
+    const currentPrice = Number(courseDetails.price) || 0;
+    const currentDiscount = Number(courseDetails.discountPrice) || 0;
+
+    // Nếu có nhập giá giảm, thì giá giảm bắt buộc phải NHỎ HƠN giá gốc
+    if (currentDiscount > 0 && currentDiscount >= currentPrice) {
+      alert("Lỗi: Giá giảm (VNĐ) bắt buộc phải nhỏ hơn Giá gốc!");
+      return; // Dừng lại, không cho gọi API lưu
+    }
+
+    // 2. NẾU GIÁ HỢP LỆ THÌ CHO PHÉP LƯU BÌNH THƯỜNG
     try {
       const payload = {
         title: courseDetails.title || '',
         description: courseDetails.description || '',
         thumbnail: courseDetails.thumbnail || null,
         tags: courseDetails.tags || '',
-        price: Number(courseDetails.price) || 0,
-        discountPrice: Number(courseDetails.discountPrice) || 0,
+        price: currentPrice,
+        discountPrice: currentDiscount,
         courseData: courseData || [], 
         blocks: blocksByLesson || {} 
       };

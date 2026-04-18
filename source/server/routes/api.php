@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\OderController;
 use App\Http\Controllers\Api\LearnController;
-use App\Http\Controllers\Api\CommentController; // Thêm dòng này
+use App\Http\Controllers\Api\CommentController;
 
 // ==========================================
 // VÙNG API CÔNG CỘNG (Không cần đăng nhập)
@@ -40,7 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-
+    Route::get('/lecturer/statistics', [CourseController::class, 'getStatistics']);
     // Group API dành cho Giảng viên (Lecturer)
     // Mẹo: Nếu bạn đã tạo middleware CheckAdmin, hãy bọc thêm nó ở đây (VD: middleware(['auth:sanctum', 'admin']))
     Route::prefix('lecturer/courses')->group(function () {
@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/upload-video', VideoUploadController::class); 
         Route::post('/upload-image', ImageUploadController::class); 
         Route::put('/{courseGroupId}/price', [CourseController::class, 'updatePrice']); 
+
         
         // CẬP NHẬT: Trỏ vào hàm dành riêng cho Giảng viên (Xem full data, không bị cắt xén)
         Route::get('/{courseGroupId}/published', [CourseController::class, 'showPublishedForLecturer']); 

@@ -49,7 +49,7 @@ class CourseAPI {
   static async unpublishCourse(courseGroupId) { return apiClient.post(`/lecturer/courses/${courseGroupId}/unpublish`); } // Hủy xuất bản khóa học để đưa về draft
   static async updateCoursePrice(courseGroupId, data) { return apiClient.put(`/lecturer/courses/${courseGroupId}/price`, data); } // Cập nhật giá khóa học (áp dụng cho cả draft và published)
   static async getPublishedCourse(courseGroupId) { return apiClient.get(`/lecturer/courses/${courseGroupId}/published`); }
-  
+  static async getStatistics() { return apiClient.get('/lecturer/statistics'); }
   static async uploadVideo(file) {
     const formData = new FormData(); // Tạo một chiếc "hộp" chuyên dụng để chứa file là FormData.
     formData.append('video', file); // Nhét cái file đó vào hộp (formData.append()).

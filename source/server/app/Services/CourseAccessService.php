@@ -10,7 +10,6 @@ class CourseAccessService
     public function getSanitizedCourseData($course, $user)
     {
         // 1. Kiểm tra trạng thái mua hàng của User hiện tại
-        // (Giả sử bạn có bảng orders liên kết user_id và course_id)
         $hasPurchased = false;
         if ($user) {
             $hasPurchased = $user->orders()
@@ -26,7 +25,7 @@ class CourseAccessService
         foreach ($courseData as &$unit) {
             foreach ($unit['items'] as &$item) {
                 
-                // Bài học sẽ bị KHÓA nếu: Chưa mua VÀ Không cho học thử (isPreview = false)
+                // Bài học sẽ bị khóa vì chưa mua và không cho học thử (isPreview = false)
                 $isLocked = !$hasPurchased && empty($item['isPreview']);
                 
                 // Gắn nhãn để React biết đường hiển thị giao diện khóa

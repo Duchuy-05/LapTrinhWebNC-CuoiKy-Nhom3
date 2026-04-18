@@ -4,7 +4,6 @@ import CourseAPI from '../services/courseApi';
 const VideoBlockEditor = ({ block, updateBlock }) => {
   const [activeTab, setActiveTab] = useState(block.videoType || 'link');
   
-  // 1. Map data cho đầy đủ, kể cả data cũ để không bị mất
   const initialVideoData = {
     youtubeUrl: block.youtubeUrl || (block.videoType === 'link' ? block.url : '') || '',
     youtubeTitle: block.youtubeTitle || (block.videoType === 'link' ? block.title : '') || '',
@@ -25,24 +24,21 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  // YÊU CẦU 1: Hàm này sẽ tự động lưu lên CourseEditor mỗi khi có thay đổi
   const handleChange = (field, value) => {
-    setVideoData((prevData) => ({ ...prevData, [field]: value }));
+    const newData = { ...videoData, [field]: value };
+    setVideoData(newData); 
+    
+    // Tự động đồng bộ lên Component cha
+    updateBlock(block.id, { 
+        ...newData, 
+        videoType: activeTab 
+    });
   };
 
-  // 2. Hàm lưu đẩy toàn bộ Object videoData vào
-  const handleSave = () => {
-    const dataToUpdate = {
-      ...videoData,      // Lưu TẤT CẢ 6 trường: Url, Title, Duration của cả Youtube lẫn Upload
-      videoType: activeTab // Lưu kèm trạng thái hiện tại (Giảng viên chốt dùng cái nào)
-    };
-
-    updateBlock(block.id, dataToUpdate);
-    alert("Đã lưu tạm thời thông tin Video!");
-  };
-
-  const handleCancel = () => {
-    setVideoData(initialVideoData);
-    setActiveTab(block.videoType || 'link');
+  const handleTabSwitch = (tab) => {
+      setActiveTab(tab);
+      updateBlock(block.id, { ...videoData, videoType: tab });
   };
 
   const handleFileUpload = async (e) => {
@@ -54,11 +50,16 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
       const response = await CourseAPI.uploadVideo(file);
       const uploadedUrl = response.data.videoUrl; 
       
-      handleChange('uploadUrl', uploadedUrl);
+      const newTitle = videoData.uploadTitle || file.name.split('.').slice(0, -1).join('.');
       
-      if (!videoData.uploadTitle) {
-        handleChange('uploadTitle', file.name.split('.').slice(0, -1).join('.'));
-      }
+      const newData = {
+          ...videoData,
+          uploadUrl: uploadedUrl,
+          uploadTitle: newTitle
+      };
+      
+      setVideoData(newData);
+      updateBlock(block.id, { ...newData, videoType: activeTab }); // Tự động lưu
       
     } catch (error) {
       console.error(error);
@@ -69,17 +70,19 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
   };
 
   return (
-    <div className="border border-slate-200 rounded-lg p-5 bg-white mt-2 shadow-sm">
-      {/* Tabs Menu */}
+    <div className="border border-slate-200 rounded-lg p-5 bg-white mt-2 shadow-sm relative">
+      
+      {/* Thông báo tự động lưu */}
+
       <div className="flex gap-6 mb-6 border-b border-slate-100 pb-2">
         <button 
-          onClick={() => setActiveTab('link')}
+          onClick={() => handleTabSwitch('link')}
           className={`pb-2 text-sm font-bold transition-all cursor-pointer ${activeTab === 'link' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           LINK YOUTUBE
         </button>
         <button 
-          onClick={() => setActiveTab('upload')}
+          onClick={() => handleTabSwitch('upload')}
           className={`pb-2 text-sm font-bold transition-all cursor-pointer ${activeTab === 'upload' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
           UPLOAD FILE
@@ -92,46 +95,21 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
           <div className="animate-fadeIn space-y-4">
              {getYouTubeVideoId(videoData.youtubeUrl) && (
                <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black shadow-lg">
-                 <iframe
-                   className="absolute top-0 left-0 w-full h-full"
-                   src={`https://www.youtube.com/embed/${getYouTubeVideoId(videoData.youtubeUrl)}`}
-                   frameBorder="0"
-                   allowFullScreen
-                 ></iframe>
+                 <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${getYouTubeVideoId(videoData.youtubeUrl)}`} frameBorder="0" allowFullScreen></iframe>
                </div>
              )}
-             
              <div className="space-y-3">
                <label className="text-xs font-bold text-slate-500">ĐƯỜNG DẪN VIDEO</label>
-               <input 
-                 type="text" 
-                 placeholder="Dán link Youtube tại đây..." 
-                 className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-100 outline-none border-slate-200"
-                 value={videoData.youtubeUrl}
-                 onChange={(e) => handleChange('youtubeUrl', e.target.value)}
-               />
-               
+               <input type="text" placeholder="Dán link Youtube tại đây..." className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-100 outline-none border-slate-200" value={videoData.youtubeUrl} onChange={(e) => handleChange('youtubeUrl', e.target.value)} />
                <div className="flex gap-4">
                  <div className="flex-1 space-y-2">
-                   <label className="text-xs font-bold text-slate-500">TIÊU ĐỀ BÀI HỌC</label>
-                   <input 
-                     type="text" 
-                     placeholder="Nhập tên tiêu đề nhé..." 
-                     className="w-full p-2.5 border rounded-lg outline-none border-slate-200 focus:border-blue-400"
-                     value={videoData.youtubeTitle}
-                     onChange={(e) => handleChange('youtubeTitle', e.target.value)}
-                   />
+                   <label className="text-xs font-bold text-slate-500">TIÊU ĐỀ BÀI HỌC (YOUTUBE)</label>
+                   <input type="text" placeholder="Nhập tên tiêu đề nhé..." className="w-full p-2.5 border rounded-lg outline-none border-slate-200 focus:border-blue-400" value={videoData.youtubeTitle} onChange={(e) => handleChange('youtubeTitle', e.target.value)} />
                  </div>
                  <div className="w-32 space-y-2">
                    <label className="text-xs font-bold text-slate-500">THỜI LƯỢNG</label>
                    <div className="flex items-center border rounded-lg overflow-hidden border-slate-200">
-                     <input 
-                       type="number"
-                       min={1}
-                       className="w-full p-2.5 outline-none text-center"
-                       value={videoData.youtubeDuration}
-                       onChange={(e) => handleChange('youtubeDuration', Math.max(1, Number(e.target.value)))} 
-                     />
+                     <input type="number" min={1} className="w-full p-2.5 outline-none text-center" value={videoData.youtubeDuration} onChange={(e) => handleChange('youtubeDuration', Math.max(1, Number(e.target.value)))} />
                      <span className="bg-slate-50 px-2 text-xs font-bold text-slate-400">P</span>
                    </div>
                  </div>
@@ -149,12 +127,7 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
                 ) : videoData.uploadUrl ? (
                   <div className="space-y-3">
                     <video src={videoData.uploadUrl} controls className="w-full rounded-lg shadow-md aspect-video bg-black" />
-                    <button 
-                      onClick={() => handleChange('uploadUrl', '')}
-                      className="text-xs text-red-500 font-bold hover:underline"
-                    >
-                      XÓA VÀ TẢI LẠI FILE KHÁC
-                    </button>
+                    <button onClick={() => handleChange('uploadUrl', '')} className="text-xs text-red-500 font-bold hover:underline">XÓA VÀ TẢI LẠI FILE KHÁC</button>
                   </div>
                 ) : (
                   <label className="cursor-pointer block">
@@ -167,50 +140,19 @@ const VideoBlockEditor = ({ block, updateBlock }) => {
 
              <div className="flex gap-4">
                 <div className="flex-1 space-y-2">
-                  <label className="text-xs font-bold text-slate-500">TIÊU ĐỀ BÀI HỌC</label>
-                  <input 
-                    type="text" 
-                    placeholder="Nhập tên tiêu đề nhé..." 
-                    className="w-full p-2.5 border rounded-lg outline-none border-slate-200 focus:border-blue-400"
-                    value={videoData.uploadTitle}
-                    onChange={(e) => handleChange('uploadTitle', e.target.value)}
-                  />
+                  <label className="text-xs font-bold text-slate-500">TIÊU ĐỀ BÀI HỌC (TẢI LÊN)</label>
+                  <input type="text" placeholder="Nhập tên tiêu đề nhé..." className="w-full p-2.5 border rounded-lg outline-none border-slate-200 focus:border-blue-400" value={videoData.uploadTitle} onChange={(e) => handleChange('uploadTitle', e.target.value)} />
                 </div>
                 <div className="w-32 space-y-2">
                   <label className="text-xs font-bold text-slate-500">THỜI LƯỢNG</label>
                   <div className="flex items-center border rounded-lg overflow-hidden border-slate-200">
-                    <input 
-                      type="number" 
-                      min={1}
-                      className="w-full p-2.5 outline-none text-center"
-                      value={videoData.uploadDuration}
-                      onChange={(e) => handleChange('uploadDuration', Number(e.target.value))}
-                    />
+                    <input type="number" min={1} className="w-full p-2.5 outline-none text-center" value={videoData.uploadDuration} onChange={(e) => handleChange('uploadDuration', Number(e.target.value))} />
                     <span className="bg-slate-50 px-2 text-xs font-bold text-slate-400">P</span>
                   </div>
                 </div>
              </div>
           </div>
         )}
-        <p className="text-xs text-slate-400">
-          Học viên cần xem hết thời lượng yêu cầu để được tính là hoàn thành.
-        </p>
-        
-        {/* Footer Actions */}
-        <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-50">
-          <button 
-            onClick={handleCancel}
-            className="px-6 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-          >
-            HỦY BỎ
-          </button>
-          <button 
-            onClick={handleSave}
-            className="px-8 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-md shadow-blue-100 transition-all active:scale-95 cursor-pointer"
-          >
-            LƯU VIDEO
-          </button>
-        </div>
       </div>
     </div>
   );

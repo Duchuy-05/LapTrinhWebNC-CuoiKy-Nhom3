@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CourseAPI from '../services/courseApi'; 
-
+import CoursePricingEditor from '../components/CoursePricingEditor';
 export default function PublishedCourseViewer() {
   const params = useParams();
   const navigate = useNavigate();
@@ -67,7 +67,6 @@ export default function PublishedCourseViewer() {
         dbCourseData.forEach(u => expanded[u.id] = true);
         setExpandedUnits(expanded);
 
-        // FIX 1: Bóc tách lại blocks giống file ban đầu của bạn
         let parsedBlocks = publishedCourse.blocks || {};
         if (Array.isArray(parsedBlocks) && parsedBlocks.length > 0 && dbCourseData.length > 0) {
           parsedBlocks = { [dbCourseData[0].items[0].id]: parsedBlocks };
@@ -90,7 +89,31 @@ export default function PublishedCourseViewer() {
     setActiveItem(item); 
   };
 
-  const handleUpdatePrice = async () => { /* Giữ nguyên hàm của bạn */ };
+  const handleUpdatePrice = async (pricingData) => {
+    setIsUpdatingPrice(true);
+    try {
+      // Gọi API cập nhật giá. Backend của bạn đã có sẵn hàm updatePrice rất chuẩn.
+      await CourseAPI.updateCoursePrice(courseId, { 
+        price: pricingData.price, 
+        discountPrice: pricingData.discountPrice 
+      });
+      
+      // Cập nhật lại State ở Frontend để giao diện thay đổi ngay lập tức
+      const finalPrice = pricingData.discountPrice > 0 ? pricingData.discountPrice : pricingData.price;
+      setCourseDetails(prev => ({
+          ...prev, 
+          price: pricingData.price, 
+          discountPrice: pricingData.discountPrice,
+          final_price: finalPrice
+      }));
+
+      alert("Cập nhật giá thành công!");
+    } catch (error) {
+      alert("Lỗi khi cập nhật giá! Vui lòng thử lại.");
+    } finally {
+      setIsUpdatingPrice(false);
+    }
+  };
   const handleUnpublish = async () => { /* Giữ nguyên hàm của bạn */ };
 
   // FIX 1: Trích xuất nội dung bài học đúng cách
@@ -212,35 +235,61 @@ export default function PublishedCourseViewer() {
                       {block.type === 'image' && block.content && (
                         <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-100"><img src={block.content} alt="Lesson" className="w-full object-contain bg-slate-50 hover:scale-105 transition-transform duration-700" /></div>
                       )}
-                      {block.type === 'video' && (
-                        <div className="bg-black rounded-2xl overflow-hidden aspect-video shadow-2xl relative ring-1 ring-slate-900/10">
-                           {block.videoType === 'link' ? (
-                              getYouTubeVideoId(block.youtubeUrl || block.url) ? (
-                                <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${getYouTubeVideoId(block.youtubeUrl || block.url)}`} allowFullScreen></iframe>
-                              ) : (<div className="flex items-center justify-center h-full text-slate-400">Link YouTube lỗi</div>)
-                           ) : (<video src={block.uploadUrl || block.url} controls className="w-full h-full object-contain" />)}
-                        </div>
-                      )}
-                      {block.type === 'quiz' && block.questions && (
-                        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-8 rounded-3xl border border-blue-100 shadow-sm">
-                          <h4 className="font-bold text-indigo-900 mb-6 text-xl border-b border-indigo-100 pb-3">📝 Bài tập kiểm tra</h4>
-                          <div className="space-y-6">
-                            {block.questions.map((q, qIdx) => (
-                              <div key={qIdx} className="bg-white p-5 rounded-2xl shadow-sm border border-white hover:border-indigo-200 transition-colors">
-                                <p className="font-bold text-slate-800 mb-4 text-lg"><span className="text-indigo-600 mr-2">{qIdx + 1}.</span> {q.question}</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  {q.options.map((opt, oIdx) => (
-                                    <div key={oIdx} className={`p-3 rounded-xl border-2 flex items-center gap-3 ${q.correctAnswerIndex === oIdx ? 'bg-green-50 border-green-500 text-green-800 font-bold' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
-                                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${q.correctAnswerIndex === oIdx ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500'}`}>{['A', 'B', 'C', 'D'][oIdx]}</span>
-                                      {opt}
-                                    </div>
-                                  ))}
+                    {block.type === 'video' && (
+                      <div className="space-y-6">
+                        
+                        {/* Biến chứa logic kiểm tra dữ liệu cũ/mới để tương thích */}
+                        {(() => {
+                          const ytUrl = block.youtubeUrl || (block.videoType === 'link' ? block.url : null);
+                          const upUrl = block.uploadUrl || (block.videoType === 'upload' ? block.url : null);
+                          
+                          const hasYoutube = ytUrl && getYouTubeVideoId(ytUrl);
+                          const hasUpload = upUrl;
+
+                          // Nếu không có cả 2
+                          if (!hasYoutube && !hasUpload) {
+                              return <div className="text-slate-400 italic text-center p-6 border-dashed border rounded-xl">Chưa cấu hình link video</div>;
+                          }
+
+                          return (
+                            <>
+                              {/* HIỂN THỊ YOUTUBE (Nằm trên) */}
+                              {hasYoutube && (
+                                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                                  <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                      <span className="text-red-500 text-xl">▶</span> 
+                                      {block.youtubeTitle || (block.videoType === 'link' ? block.title : 'Video Bài Giảng (YouTube)')}
+                                    </h3>
+                                  </div>
+                                  <div className="bg-black rounded-xl overflow-hidden aspect-video shadow-lg relative ring-1 ring-slate-900/10">
+                                    <iframe className="absolute top-0 left-0 w-full h-full" src={`https://www.youtube.com/embed/${getYouTubeVideoId(ytUrl)}`} allowFullScreen></iframe>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                              )}
+
+                              {/* HIỂN THỊ VIDEO UPLOAD (Nằm dưới) */}
+                              {hasUpload && (
+                                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                                  <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                      <span className="text-blue-500 text-xl">📁</span> 
+                                      {block.uploadTitle || (block.videoType === 'upload' ? block.title : 'Tài Liệu Video (Tải Lên)')}
+                                    </h3>
+                                    <span className="text-xs font-bold text-slate-500 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-1">
+                                      ⏱ {block.uploadDuration || (block.videoType === 'upload' ? block.duration : 0)} phút
+                                    </span>
+                                  </div>
+                                  <div className="bg-black rounded-xl overflow-hidden shadow-lg ring-1 ring-slate-900/10">
+                                    <video src={upUrl} controls className="w-full object-contain aspect-video bg-black" />
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
                     </div>
                   ))
                 )}
@@ -286,24 +335,14 @@ export default function PublishedCourseViewer() {
 
             <hr className="border-slate-100 mb-6" />
 
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div className="flex items-center gap-2 mb-3"><span className="text-lg">🏷️</span><h3 className="font-bold text-slate-800 text-sm">Chính sách giá</h3></div>
-              <div className="space-y-3 scale-[0.95] origin-top">
-                <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase w-16">Giá gốc</label>
-                  <input type="number" min="0" className="flex-1 text-right text-sm font-bold text-slate-700 bg-transparent outline-none" value={courseDetails.price} onChange={(e) => setCourseDetails({...courseDetails, price: Math.max(0, Number(e.target.value))})} />
-                  <span className="text-xs font-bold text-slate-400 ml-1">đ</span>
-                </div>
-                <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-100 transition-all">
-                  <label className="text-[10px] font-extrabold text-green-500 uppercase w-16">Giảm giá</label>
-                  <input type="number" min="0" className="flex-1 text-right text-sm font-bold text-green-600 bg-transparent outline-none" value={courseDetails.discountPrice} onChange={(e) => setCourseDetails({...courseDetails, discountPrice: Math.max(0, Number(e.target.value))})} />
-                  <span className="text-xs font-bold text-slate-400 ml-1">đ</span>
-                </div>
-                <button onClick={handleUpdatePrice} disabled={isUpdatingPrice} className="w-full py-2.5 mt-1 text-xs font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-md transition-all active:scale-95 disabled:bg-slate-300 cursor-pointer">
-                  {isUpdatingPrice ? 'ĐANG LƯU...' : 'CẬP NHẬT GIÁ'}
-                </button>
-              </div>
-            </div>
+            {/* Gọi Component xử lý Giá tiền ở đây */}
+            <CoursePricingEditor 
+              initialPrice={courseDetails.price}
+              initialDiscountPrice={courseDetails.discountPrice}
+              isPublished={true} 
+              isSaving={isUpdatingPrice}
+              onSave={handleUpdatePrice}
+            />
 
             <div className="mt-auto pt-8">
               <button onClick={handleUnpublish} className="w-full py-3.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 group cursor-pointer">

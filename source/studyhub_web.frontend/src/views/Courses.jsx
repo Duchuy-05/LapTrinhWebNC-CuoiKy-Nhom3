@@ -61,29 +61,23 @@ const Courses = () => {
     }
   };
 
-const handleAddNewCourse = async () => {
+  const handleAddNewCourse = async () => {
     const title = window.prompt("Nhập tên khóa học mới:");
     if (title && title.trim() !== "") {
       try {
         const response = await CourseAPI.createDraft(title.trim());
         
-        // 1. IN RA CONSOLE ĐỂ BẮT BỆNH BACKEND TRẢ VỀ CÁI GÌ
-        console.log("=== DỮ LIỆU BACKEND TRẢ VỀ ===", response.data);
-        
-        // 2. QUÉT TÌM ID BẰNG MỌI GIÁ (Hỗ trợ nhiều cấu trúc JSON khác nhau)
         const newCourseGroupId = 
-          response.data?.courseGroupId ||         // Nếu backend trả ở ngoài cùng (Code mới)
-          response.data?.data?.courseGroupId ||   // Nếu backend bọc trong data (Code cũ)=
-          response.data?.data?._id ||             // Nếu backend trả thẳng ID của MongoDB
+          response.data?.courseGroupId ||         
+          response.data?.data?.courseGroupId ||   
+          response.data?.data?._id ||             
           response.data?._id;
 
-        // 3. NẾU VẪN KHÔNG TÌM THẤY THÌ BÁO LỖI CHI TIẾT RA MÀN HÌNH
         if (!newCourseGroupId) {
           alert(`Lỗi: Backend KHÔNG trả về ID khóa học!\n\nChi tiết Backend gửi về:\n${JSON.stringify(response.data)}\n\n(Hãy mở Console F12 để xem chi tiết hơn)`);
           return;
         }
 
-        // 4. Nếu có ID thì chuyển trang mượt mà
         navigate(`/lecturer/courses/${newCourseGroupId}/edit`);
         
       } catch (error) {
@@ -136,80 +130,104 @@ const handleAddNewCourse = async () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {courses.map(course => (
-            <div key={course.id || course.courseGroupId} className="flex flex-col overflow-hidden transition-all bg-white border border-gray-100 shadow-sm rounded-2xl hover:shadow-lg">
-              {/* Hình ảnh */}
-              <div className="relative h-44 overflow-hidden bg-slate-100 shrink-0">
-                <img src={course.image || course.thumbnail || 'https://via.placeholder.com/300x200'} alt={course.title} className="object-cover w-full h-full" />
-                
-                {/* ĐỔI MÀU BADGE: UNPUBLISHED thì hiện màu Cam cho nổi bật */}
-                <span className={`absolute top-4 -right-10 px-10 py-1.5 text-[10px] uppercase font-bold text-white rotate-45 shadow-sm ${course.status === 'UNPUBLISHED' ? 'bg-amber-500' : 'bg-slate-700'}`}>
-                  {course.status}
-                </span>
-              </div>
-              
-              {/* Nội dung thẻ */}
-              <div className="p-5 flex flex-col flex-1">
-                
-                {/* HEADER: Tiêu đề (Trái) - Giá tiền (Phải) */}
-                <div className="flex justify-between items-start mb-3 gap-3">
-                  <h3 className="text-lg font-bold text-gray-800 line-clamp-2 flex-1" title={course.title}>
-                    {course.title}
-                  </h3>
-                  <div className="flex flex-col items-end shrink-0 text-right">
-                    {course.price > 0 ? (
-                      <>
-                        <span className="text-lg font-extrabold text-blue-600 leading-tight">
-                          {Number(course.price - (course.discountPrice || 0)).toLocaleString()} đ
-                        </span>
-                        {course.discountPrice > 0 && course.discountPrice < course.price && (
-                          <span className="text-xs line-through text-slate-400 mt-0.5">
-                            {Number(course.price).toLocaleString()} đ
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-lg font-extrabold text-green-500 leading-tight">Miễn phí</span>
-                    )}
-                  </div>
-                </div>
+          {courses.map(course => {
+            const originalPrice = course.price || 0;
+            const discountAmount = course.discountPrice || 0;
+            const finalPrice = Math.max(0, originalPrice - discountAmount);
+            const isFree = finalPrice === 0;
+            
+            // YÊU CẦU: Chỉ check thêm điều kiện phải là bản UNPUBLISHED
+            const isUnpublished = course.status === 'UNPUBLISHED';
 
-                {/* Mô tả */}
-                <p className="text-sm text-slate-500 line-clamp-2 flex-1 mb-4">
-                  {course.description || "Chưa có mô tả tổng quan cho khóa học này."}
-                </p>
-                
-                {/* FOOTER: Số lượng Unit + Nút bấm */}
-                <div className="mt-auto pt-4 border-t border-slate-100">
+            return (
+              <div key={course.id || course.courseGroupId} className="flex flex-col overflow-hidden transition-all bg-white border border-gray-100 shadow-sm rounded-2xl hover:shadow-lg">
+                {/* Hình ảnh */}
+                <div className="relative h-44 overflow-hidden bg-slate-100 shrink-0">
+                  <img src={course.image || course.thumbnail || 'https://via.placeholder.com/300x200'} alt={course.title} className="object-cover w-full h-full" />
                   
-                  {/* HIỂN THỊ SỐ UNIT Ở ĐÂY */}
-                <div className="w-max inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-500 mb-4 bg-blue-50 py-1.5 px-3 rounded-md">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  {course.unit_count || 0} Units
+                  {/* ĐỔI MÀU BADGE: UNPUBLISHED thì hiện màu Cam cho nổi bật */}
+                  <span className={`absolute top-4 -right-10 px-10 py-1.5 text-[10px] uppercase font-bold text-white rotate-45 shadow-sm ${isUnpublished ? 'bg-amber-500' : 'bg-slate-700'}`}>
+                    {course.status}
+                  </span>
                 </div>
-
-                  <div className="space-y-2">
-                    <button 
-                      onClick={() => handleEditCourse(course.courseGroupId)}
-                      className="w-full py-2.5 font-bold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
-                    >
-                      Chỉnh sửa
-                    </button>
-
-                    <button 
-                      onClick={() => handlePublish(course.courseGroupId)}
-                      className="w-full py-2.5 font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-sm shadow-red-200"
-                    >
-                      Xuất bản
-                    </button>
+                
+                {/* Nội dung thẻ */}
+                <div className="p-5 flex flex-col flex-1">
+                  
+                  {/* HEADER: Tiêu đề (Trái) - Giá tiền (Phải) */}
+                  <div className="flex justify-between items-start mb-3 gap-3">
+                    <h3 className="text-lg font-bold text-gray-800 line-clamp-2 flex-1" title={course.title}>
+                      {course.title}
+                    </h3>
+                    
+                    {/* BẮT ĐẦU ÁP DỤNG LOGIC RENDER GIÁ MỚI */}
+                    <div className="flex flex-col items-end shrink-0 text-right mt-1">
+                      {isFree && isUnpublished ? (
+                        // 1. CHỈ HIỂN THỊ CHỮ "MIỄN PHÍ" NẾU ĐÃ BỊ THU HỒI
+                        <>
+                          <span className="text-lg font-extrabold text-green-500 leading-tight uppercase">
+                            Miễn phí
+                          </span>
+                          {originalPrice > 0 && (
+                            <span className="text-xs line-through text-slate-400 mt-1 decoration-slate-400">
+                              {Number(originalPrice).toLocaleString()} đ
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        // 2. NẾU LÀ BẢN DRAFT, HIỆN GIÁ BÌNH THƯỜNG (Dù giá = 0 thì vẫn hiện "0 đ")
+                        <>
+                          <span className="text-lg font-extrabold text-blue-600 leading-tight">
+                            {Number(finalPrice).toLocaleString()} đ
+                          </span>
+                          {discountAmount > 0 && (
+                            <span className="text-xs line-through text-slate-400 mt-1 decoration-slate-400">
+                              {Number(originalPrice).toLocaleString()} đ
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {/* KẾT THÚC LOGIC RENDER GIÁ MỚI */}
                   </div>
-                </div>
 
+                  {/* Mô tả */}
+                  <p className="text-sm text-slate-500 line-clamp-2 flex-1 mb-4">
+                    {course.description || "Chưa có mô tả tổng quan cho khóa học này."}
+                  </p>
+                  
+                  {/* FOOTER: Số lượng Unit + Nút bấm */}
+                  <div className="mt-auto pt-4 border-t border-slate-100">
+                    
+                    {/* HIỂN THỊ SỐ UNIT Ở ĐÂY */}
+                    <div className="w-max inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-500 mb-4 bg-blue-50 py-1.5 px-3 rounded-md">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      {course.unit_count || 0} Units
+                    </div>
+
+                    <div className="space-y-2">
+                      <button 
+                        onClick={() => handleEditCourse(course.courseGroupId)}
+                        className="w-full py-2.5 font-bold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
+                      >
+                        Chỉnh sửa
+                      </button>
+
+                      <button 
+                        onClick={() => handlePublish(course.courseGroupId)}
+                        className="w-full py-2.5 font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors cursor-pointer shadow-sm shadow-red-200"
+                      >
+                        Xuất bản
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
