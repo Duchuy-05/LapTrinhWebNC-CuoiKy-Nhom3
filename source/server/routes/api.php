@@ -32,6 +32,8 @@ Route::post('/register', [FrontendApiController::class, 'register']);
 Route::get('/student/home', [StudentController::class, 'Home']);
 Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
 Route::get('/courses/{courseGroupId}/detail', [App\Http\Controllers\Api\CourseController::class, 'getPublicDetail']);
+
+Route::post('/webhook/payos', [OderController::class, 'handlePayOSWebhook']);
 // ==========================================
 // VÙNG API ĐƯỢC BẢO VỆ (Bắt buộc phải có Token)
 // ==========================================
@@ -55,7 +57,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{courseGroupId}/price', [CourseController::class, 'updatePrice']); 
 
         
-        // CẬP NHẬT: Trỏ vào hàm dành riêng cho Giảng viên (Xem full data, không bị cắt xén)
         Route::get('/{courseGroupId}/published', [CourseController::class, 'showPublishedForLecturer']); 
     });
 
@@ -67,5 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/enroll/{courseGroupId}', [StudentController::class, 'enroll']);
         Route::post('/courses/{courseGroupId}/progress', [LearnController::class, 'updateProgress']);
         Route::post('/courses/{courseGroupId}/comment', [CommentController::class, 'addCourseReview']);
+        Route::post('/courses/{courseGroupId}/checkout', [OderController::class, 'processCheckout'])->middleware('auth:sanctum');
     });
+
 });

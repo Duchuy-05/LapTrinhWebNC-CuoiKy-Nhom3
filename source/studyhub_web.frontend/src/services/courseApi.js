@@ -82,9 +82,11 @@ class CourseAPI {
     return apiClient.get(`/courses/${courseId}/detail`); 
   }
   
-  // Gửi bình luận
   static async submitCourseComment(courseId, data) { 
     return apiClient.post(`/student/courses/${courseId}/comment`, data); 
+  }
+  static async processCheckout(courseId, paymentMethod) {
+    return apiClient.post(`/student/courses/${courseId}/checkout`, { paymentMethod });
   }
 }
 

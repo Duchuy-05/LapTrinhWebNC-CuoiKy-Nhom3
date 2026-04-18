@@ -86,7 +86,6 @@ export default function StudentDashboard() {
             </section>
           )}
 
-          {/* 3. DẢI KHÓA HỌC: THỊNH HÀNH / MỚI NHẤT*/}
           <section>
             <div className="flex items-end justify-between pb-4 mb-8 border-b">
               <div>
