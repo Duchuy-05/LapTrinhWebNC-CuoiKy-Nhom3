@@ -12,6 +12,7 @@ import MyCourses from './views/MyCourses';
 import PublishedCourseViewer from './components/PublishedCourseViewer';
 import CoursePlayer from './views/CoursePlayer';
 import CourseDetail from './views/CourseDetail';
+import Checkout from './views/Checkout';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="my-courses" element={<MyCourses />} />
           <Route path="courses/:courseId/learn" element={<CoursePlayer />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
+          <Route path="courses/:courseId/checkout" element={<Checkout />} />
         </Route>
 
         {/* KHÔNG GIAN GIẢNG DẠY (Chế độ Giảng viên) */}

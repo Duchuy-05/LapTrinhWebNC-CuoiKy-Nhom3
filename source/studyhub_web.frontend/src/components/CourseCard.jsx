@@ -8,7 +8,10 @@ const CourseCard = ({ course, badge }) => {
   // State để điều khiển cửa sổ Popup yêu cầu đăng nhập
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const isFree = Number(course.price) === 0 || Number(course.discountPrice) === 0;
+  const currentPrice = Number(course.price || 0);
+  const isDiscountActive = course.discountPrice !== null && course.discountPrice !== undefined;
+  const currentDiscountPrice = isDiscountActive ? Number(course.discountPrice) : currentPrice;
+  const isFree = currentPrice === 0 || (isDiscountActive && currentDiscountPrice === 0);
   const isPurchased = course.is_purchased;
 
   // Hàm kiểm tra trạng thái đăng nhập
@@ -21,17 +24,11 @@ const CourseCard = ({ course, badge }) => {
     return true;
   };
 
-  const handleEnroll = async (e) => {
+  const handleEnroll = (e) => {
     e.stopPropagation();
-    if (!checkAuth()) return; // Chặn lại nếu chưa đăng nhập
-
-    try {
-      const response = await CourseAPI.enrollCourse(course.courseGroupId);
-      alert(response.data?.message || "Đăng ký thành công!");
-      navigate(`/student/courses/${course.courseGroupId}/learn`);
-    } catch (error) {
-      alert(error.response?.data?.message || "Có lỗi xảy ra khi đăng ký.");
-    }
+    if (!checkAuth()) return;
+    // Chuyển hướng sang trang chi tiết thanh toán
+    navigate(`/student/courses/${course.courseGroupId}/checkout`);
   };
 
   const handleGoToLearn = (e) => {
@@ -45,6 +42,31 @@ const CourseCard = ({ course, badge }) => {
     navigate(`/student/courses/${course.courseGroupId}`);
   };
 
+  // LOGIC HIỂN THỊ GIÁ TIỀN THÔNG MINH
+  const renderPrice = () => {
+    // TH1: Khóa học hoàn toàn miễn phí từ đầu
+    if (currentPrice === 0) {
+      return <span className="text-green-600 font-bold text-lg">Miễn phí</span>;
+    }
+
+    // TH2: Có giảm giá (Giảm xuống 1 mức nào đó, hoặc giảm hẳn xuống 0đ)
+    if (isDiscountActive && currentDiscountPrice < currentPrice) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-indigo-600 font-black text-lg">
+            {currentDiscountPrice === 0 ? "Miễn phí" : `${currentDiscountPrice.toLocaleString()}đ`}
+          </span>
+          <span className="text-slate-400 text-xs line-through">
+            {currentPrice.toLocaleString()}đ
+          </span>
+        </div>
+      );
+    }
+
+    // TH3: Không giảm giá (Bán đúng giá gốc)
+    return <span className="text-indigo-600 font-black text-lg">{currentPrice.toLocaleString()}đ</span>
+  };
+
   return (
     <>
       {/* THẺ KHÓA HỌC CHÍNH */}
@@ -55,7 +77,7 @@ const CourseCard = ({ course, badge }) => {
           </span>
         )}
         
-        {/* THUMBNAIL: Đã thêm onClick và cursor-pointer */}
+        {/* THUMBNAIL */}
         <div 
           onClick={handleGoToDetail}
           className="aspect-video overflow-hidden bg-slate-100 relative cursor-pointer"
@@ -74,7 +96,7 @@ const CourseCard = ({ course, badge }) => {
         </div>
 
         <div className="p-5 flex flex-col flex-1">
-          {/* TÊN KHÓA HỌC: Đã thêm onClick và cursor-pointer */}
+          {/* TÊN KHÓA HỌC */}
           <h3 
             onClick={handleGoToDetail}
             className="font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-indigo-600 h-12 cursor-pointer transition-colors"
@@ -86,21 +108,9 @@ const CourseCard = ({ course, badge }) => {
             👤 {course.student_count || 0} học viên
           </p>
 
+          {/* VÙNG HIỂN THỊ GIÁ (Đã cập nhật gọi hàm renderPrice) */}
           <div className="flex items-center gap-2 mb-5">
-            {isFree ? (
-              <span className="text-green-600 font-bold text-lg">Miễn phí</span>
-            ) : (
-              <>
-                <span className="text-indigo-600 font-black text-lg">
-                  {Number(course.discountPrice || 0).toLocaleString()}đ
-                </span>
-                {course.price > course.discountPrice && (
-                  <span className="text-slate-400 text-xs line-through">
-                    {Number(course.price).toLocaleString()}đ
-                  </span>
-                )}
-              </>
-            )}
+            {renderPrice()}
           </div>
 
           <div className="mt-auto pt-4 border-t border-slate-50">
@@ -131,7 +141,7 @@ const CourseCard = ({ course, badge }) => {
         </div>
       </div>
 
-      {/* POPUP YÊU CẦU ĐĂNG NHẬP (Chỉ hiện khi showAuthModal = true) */}
+      {/* POPUP YÊU CẦU ĐĂNG NHẬP */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
           <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full animate-fadeIn border border-slate-100">
