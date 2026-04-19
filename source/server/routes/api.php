@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\OderController;
 use App\Http\Controllers\Api\LearnController;
 use App\Http\Controllers\Api\CommentController;
-
+use App\Http\Controllers\Api\StatisticsController;
 // ==========================================
 // VÙNG API CÔNG CỘNG (Không cần đăng nhập)
 // ==========================================
@@ -27,7 +27,7 @@ Route::get('/courses/{courseGroupId}', [CourseController::class, 'showPublishedF
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [FrontendApiController::class, 'register']);
-
+Route::post('/login/google', [AuthController::class, 'googleLogin']);
 
 Route::get('/student/home', [StudentController::class, 'Home']);
 Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
@@ -42,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    Route::get('/lecturer/statistics', [CourseController::class, 'getStatistics']);
+    Route::get('/lecturer/statistics', [StatisticsController::class, 'getStatistics']);
     // Group API dành cho Giảng viên (Lecturer)
     // Mẹo: Nếu bạn đã tạo middleware CheckAdmin, hãy bọc thêm nó ở đây (VD: middleware(['auth:sanctum', 'admin']))
     Route::prefix('lecturer/courses')->group(function () {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CourseAPI from '../services/courseApi'; 
 import CoursePricingEditor from '../components/CoursePricingEditor';
+
 export default function PublishedCourseViewer() {
   const params = useParams();
   const navigate = useNavigate();
@@ -23,7 +24,6 @@ export default function PublishedCourseViewer() {
   const [expandedUnits, setExpandedUnits] = useState({});
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
   
-  // FIX 1: Khôi phục lại state chứa nội dung block của bạn
   const [blocksByLesson, setBlocksByLesson] = useState({});
 
   const toggleUnit = (unitId) => setExpandedUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
@@ -48,12 +48,17 @@ export default function PublishedCourseViewer() {
         const publishedCourse = response.data.data;
         
         const mockStudents = publishedCourse.student_count || 128;
-        const currentPrice = publishedCourse.discountPrice > 0 ? publishedCourse.discountPrice : (publishedCourse.price || 0);
+
+        const originalP = Number(publishedCourse.price) || 0;
+        const rawD = publishedCourse.discountPrice;
+        const hasD = rawD !== null && rawD !== undefined && rawD !== '';
+        const discP = hasD ? Number(rawD) : originalP;
+        const currentPrice = discP < originalP ? discP : originalP;
 
         setCourseDetails({
           title: publishedCourse.title || '',
-          price: publishedCourse.price || 0,
-          discountPrice: publishedCourse.discountPrice || 0,
+          price: originalP,
+          discountPrice: rawD || 0,
           final_price: currentPrice,
           student_count: publishedCourse.student_count || mockStudents, 
           rating_score: publishedCourse.rating_score || 4.8,
@@ -92,14 +97,13 @@ export default function PublishedCourseViewer() {
   const handleUpdatePrice = async (pricingData) => {
     setIsUpdatingPrice(true);
     try {
-      // Gọi API cập nhật giá. Backend của bạn đã có sẵn hàm updatePrice rất chuẩn.
       await CourseAPI.updateCoursePrice(courseId, { 
         price: pricingData.price, 
         discountPrice: pricingData.discountPrice 
       });
       
-      // Cập nhật lại State ở Frontend để giao diện thay đổi ngay lập tức
-      const finalPrice = pricingData.discountPrice > 0 ? pricingData.discountPrice : pricingData.price;
+      const finalPrice = pricingData.discountPrice < pricingData.price ? pricingData.discountPrice : pricingData.price;
+      
       setCourseDetails(prev => ({
           ...prev, 
           price: pricingData.price, 
@@ -114,15 +118,27 @@ export default function PublishedCourseViewer() {
       setIsUpdatingPrice(false);
     }
   };
-  const handleUnpublish = async () => { /* Giữ nguyên hàm của bạn */ };
 
-  // FIX 1: Trích xuất nội dung bài học đúng cách
+  // === CẬP NHẬT LOGIC NGỪNG XUẤT BẢN KHÓA HỌC ===
+  const handleUnpublish = async () => {
+    if (window.confirm("Bạn có chắc chắn muốn ngừng xuất bản khóa học này không? Khóa học sẽ bị ẩn khỏi học viên và chuyển về trạng thái 'Ngừng xuất bản'.")) {
+      try {
+        await CourseAPI.unpublishCourse(courseId);
+        alert("Đã ngừng xuất bản khóa học thành công!");
+        // Điều hướng giảng viên về trang danh sách (Courses.jsx)
+        navigate('/lecturer/courses');
+      } catch (error) {
+        console.error("Lỗi khi ngừng xuất bản:", error);
+        alert("Có lỗi xảy ra khi ngừng xuất bản. Vui lòng thử lại!");
+      }
+    }
+  };
+
   const activeBlocks = activeItem ? (blocksByLesson[activeItem.id] || activeItem.blocks || []) : [];
 
-  // FIX 2: Logic hiển thị biểu tượng ổ khóa UI (không dùng để chặn truy cập)
   const isItemLockedVisually = (item) => {
-    if (item.is_locked !== undefined) return item.is_locked; // API Học viên gửi lên thì lấy luôn
-    return courseDetails.price > 0 && !item.isPreview; // Giảng viên thì tự nội suy để xem cho biết
+    if (item.is_locked !== undefined) return item.is_locked;
+    return courseDetails.final_price > 0 && !item.isPreview;
   };
 
   return (
@@ -169,13 +185,12 @@ export default function PublishedCourseViewer() {
                           <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[10px] shadow-sm font-bold shrink-0">{lIdx + 1}</span>
                           <span className="line-clamp-2 leading-relaxed opacity-90">{item.title}</span>
                         </div>
-                        {/* FIX 2: Sử dụng hàm UI để luôn thấy ổ khóa nếu cần */}
                         {isItemLockedVisually(item) ? (
                           <span className="text-slate-400 text-[10px]" title="Bài học này bị khóa với học viên">🔒</span>
                         ) : (
-                          (courseDetails.price > 0 && item.isPreview) && (
-                            <span className="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-bold shadow-sm">FREE</span>
-                          )
+                        (courseDetails.final_price > 0 && item.isPreview) && (
+                          <span className="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-bold shadow-sm">FREE</span>
+                        )
                         )}
                       </div>
                     );
@@ -223,7 +238,6 @@ export default function PublishedCourseViewer() {
               </div>
               
               <div className="p-8 space-y-10">
-                {/* Dùng activeBlocks để kiểm tra nội dung */}
                 {activeBlocks.length === 0 ? (
                   <div className="text-center py-20 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                     <span className="text-5xl block mb-3 opacity-20">📭</span><p>Nội dung bài học trống.</p>
@@ -237,8 +251,6 @@ export default function PublishedCourseViewer() {
                       )}
                     {block.type === 'video' && (
                       <div className="space-y-6">
-                        
-                        {/* Biến chứa logic kiểm tra dữ liệu cũ/mới để tương thích */}
                         {(() => {
                           const ytUrl = block.youtubeUrl || (block.videoType === 'link' ? block.url : null);
                           const upUrl = block.uploadUrl || (block.videoType === 'upload' ? block.url : null);
@@ -246,14 +258,12 @@ export default function PublishedCourseViewer() {
                           const hasYoutube = ytUrl && getYouTubeVideoId(ytUrl);
                           const hasUpload = upUrl;
 
-                          // Nếu không có cả 2
                           if (!hasYoutube && !hasUpload) {
                               return <div className="text-slate-400 italic text-center p-6 border-dashed border rounded-xl">Chưa cấu hình link video</div>;
                           }
 
                           return (
                             <>
-                              {/* HIỂN THỊ YOUTUBE (Nằm trên) */}
                               {hasYoutube && (
                                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
                                   <div className="flex justify-between items-center mb-4">
@@ -268,7 +278,6 @@ export default function PublishedCourseViewer() {
                                 </div>
                               )}
 
-                              {/* HIỂN THỊ VIDEO UPLOAD (Nằm dưới) */}
                               {hasUpload && (
                                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
                                   <div className="flex justify-between items-center mb-4">
@@ -329,13 +338,12 @@ export default function PublishedCourseViewer() {
             </div>
 
             <div className="bg-gradient-to-br from-green-500 to-emerald-700 p-5 rounded-2xl shadow-lg text-white mb-8 transform hover:-translate-y-1 transition-all">
-              <span className="text-xs font-bold text-green-100 uppercase tracking-widest block mb-1">Số lúa kiến được</span>
+              <span className="text-xs font-bold text-green-100 uppercase tracking-widest block mb-1">Số lúa kiếm được</span>
               <div className="text-3xl font-black tracking-tight">{courseDetails.revenue.toLocaleString()} <span className="text-xl">đ</span></div>
             </div>
 
             <hr className="border-slate-100 mb-6" />
 
-            {/* Gọi Component xử lý Giá tiền ở đây */}
             <CoursePricingEditor 
               initialPrice={courseDetails.price}
               initialDiscountPrice={courseDetails.discountPrice}

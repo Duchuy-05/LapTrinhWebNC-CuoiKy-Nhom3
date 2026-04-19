@@ -17,16 +17,9 @@ const Courses = () => {
       const response = await CourseAPI.getLecturerCourses();
       const allCourses = response.data.data || [];
       
-      // 1. TÌM DANH SÁCH CÁC KHÓA HỌC ĐANG ĐƯỢC XUẤT BẢN
-      const publishedGroupIds = allCourses
-        .filter(c => c.status === 'PUBLISHED')
-        .map(c => c.courseGroupId);
-
-      // 2. GOM NHÓM ĐỂ LOẠI BỎ THẺ TRÙNG LẶP
       const uniqueCoursesMap = new Map();
 
       // Hàm đánh trọng số ưu tiên để chọn thẻ hiển thị ra ngoài màn hình: 
-      // Ưu tiên hiện UNPUBLISHED > DRAFT > ARCHIVED
       const getStatusWeight = (status) => {
         if (status === 'UNPUBLISHED') return 3;
         if (status === 'DRAFT') return 2;
@@ -34,16 +27,15 @@ const Courses = () => {
       };
 
       allCourses.forEach(course => {
+        // Bản DRAFT sẽ KHÔNG bị bỏ qua và vẫn hiển thị để bạn có thể Update bình thường!
+        if (course.status === 'PUBLISHED') return;
+
         const groupId = course.courseGroupId;
 
-        // Bỏ qua luôn các khóa đang Live (sẽ nằm ở tab PublishedCourses)
-        if (publishedGroupIds.includes(groupId)) return;
-
-        // Nếu Map chưa có ID này, thì ném nó vào
         if (!uniqueCoursesMap.has(groupId)) {
           uniqueCoursesMap.set(groupId, course);
         } else {
-          // Nếu đã có ID này rồi (tức là bị trùng), thì so sánh xem thằng nào có status đáng để hiện hơn
+          // Nếu bị trùng (VD: Vừa có DRAFT vừa có UNPUBLISHED), thì ưu tiên hiện theo Trọng số
           const existingCourse = uniqueCoursesMap.get(groupId);
           if (getStatusWeight(course.status) > getStatusWeight(existingCourse.status)) {
             uniqueCoursesMap.set(groupId, course);
@@ -92,7 +84,7 @@ const Courses = () => {
   };
 
   const handlePublish = async (courseGroupId) => {
-    if(window.confirm("Bạn có chắc chắn muốn xuất bản khóa học này?")) {
+    if(window.confirm("Bạn có chắc chắn muốn xuất bản bản cập nhật của khóa học này?")) {
       try {
         await CourseAPI.publishCourse(courseGroupId);
         alert("Xuất bản thành công!");
@@ -131,11 +123,20 @@ const Courses = () => {
       ) : (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {courses.map(course => {
-            const originalPrice = course.price || 0;
-            const discountAmount = course.discountPrice || 0;
-            const finalPrice = Math.max(0, originalPrice - discountAmount);
-            const isFree = finalPrice === 0;
+            // === LOGIC XỬ LÝ GIÁ THÔNG MINH ===
+            const originalPrice = Number(course.price) || 0;
             
+            // Kiểm tra xem backend có trả về dữ liệu giá giảm không (kể cả số 0)
+            const rawDiscount = course.discountPrice;
+            const hasDiscountInput = rawDiscount !== null && rawDiscount !== undefined && rawDiscount !== '';
+            
+            // Nếu có nhập, lấy giá giảm đó. Nếu bỏ trống thì ngầm hiểu là KHÔNG GIẢM (lấy giá gốc)
+            const discountPrice = hasDiscountInput ? Number(rawDiscount) : originalPrice;
+            
+            // Giá cuối cùng sẽ ưu tiên giá giảm (nếu nó < giá gốc). 
+            const finalPrice = discountPrice < originalPrice ? discountPrice : originalPrice;
+            const isFree = finalPrice === 0;
+
             // YÊU CẦU: Chỉ check thêm điều kiện phải là bản UNPUBLISHED
             const isUnpublished = course.status === 'UNPUBLISHED';
 
@@ -160,7 +161,7 @@ const Courses = () => {
                       {course.title}
                     </h3>
                     
-                    {/* BẮT ĐẦU ÁP DỤNG LOGIC RENDER GIÁ MỚI */}
+                    {/* BẮT ĐẦU ÁP DỤNG LOGIC RENDER GIÁ */}
                     <div className="flex flex-col items-end shrink-0 text-right mt-1">
                       {isFree && isUnpublished ? (
                         // 1. CHỈ HIỂN THỊ CHỮ "MIỄN PHÍ" NẾU ĐÃ BỊ THU HỒI
@@ -180,7 +181,8 @@ const Courses = () => {
                           <span className="text-lg font-extrabold text-blue-600 leading-tight">
                             {Number(finalPrice).toLocaleString()} đ
                           </span>
-                          {discountAmount > 0 && (
+                          {/* SỬA LỖI Ở ĐÂY: Thay vì dùng discountAmount, chỉ cần so sánh originalPrice > finalPrice */}
+                          {originalPrice > finalPrice && (
                             <span className="text-xs line-through text-slate-400 mt-1 decoration-slate-400">
                               {Number(originalPrice).toLocaleString()} đ
                             </span>
@@ -188,7 +190,7 @@ const Courses = () => {
                         </>
                       )}
                     </div>
-                    {/* KẾT THÚC LOGIC RENDER GIÁ MỚI */}
+                    {/* KẾT THÚC LOGIC RENDER GIÁ */}
                   </div>
 
                   {/* Mô tả */}
@@ -199,7 +201,7 @@ const Courses = () => {
                   {/* FOOTER: Số lượng Unit + Nút bấm */}
                   <div className="mt-auto pt-4 border-t border-slate-100">
                     
-                    {/* HIỂN THỊ SỐ UNIT Ở ĐÂY */}
+                    {/* HIỂN THỊ SỐ UNIT */}
                     <div className="w-max inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-500 mb-4 bg-blue-50 py-1.5 px-3 rounded-md">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />

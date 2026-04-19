@@ -53,10 +53,13 @@ const PublishedCourses = () => {
       ) : (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {courses.map(course => {
-            // TÍNH TOÁN LOGIC GIÁ TIỀN THÔNG MINH
-            const originalPrice = course.price || 0;
-            const discountAmount = course.discountPrice || 0;
-            const finalPrice = Math.max(0, originalPrice - discountAmount);
+            // === LOGIC XỬ LÝ GIÁ THÔNG MINH (Giống Courses.jsx) ===
+            const originalPrice = Number(course.price) || 0;
+            const rawDiscount = course.discountPrice;
+            const hasDiscountInput = rawDiscount !== null && rawDiscount !== undefined && rawDiscount !== '';
+            
+            const discountPrice = hasDiscountInput ? Number(rawDiscount) : originalPrice;
+            const finalPrice = discountPrice < originalPrice ? discountPrice : originalPrice;
             const isFree = finalPrice === 0;
 
             return (
@@ -95,7 +98,8 @@ const PublishedCourses = () => {
                           <span className="text-lg font-extrabold text-blue-600 leading-tight">
                             {Number(finalPrice).toLocaleString()} đ
                           </span>
-                          {discountAmount > 0 && (
+                          {/* SỬA LỖI Ở ĐÂY: Dùng originalPrice > finalPrice để gạch ngang */}
+                          {originalPrice > finalPrice && (
                             <span className="text-xs line-through text-slate-400 mt-1 decoration-slate-400">
                               {Number(originalPrice).toLocaleString()} đ
                             </span>

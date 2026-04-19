@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import googleLogo from '../assets/images/logo_google.png'; 
+import { useGoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -8,7 +9,42 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
+  // Khởi tạo hook useGoogleLogin
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        // Lưu ý: Dùng tokenResponse.access_token thay vì credential
+        const response = await fetch('http://localhost:8000/api/login/google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ token: tokenResponse.access_token })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          setErrorMessage(data.message || 'Lỗi đăng nhập Google từ Server!');
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        navigate('/student/home'); 
+        
+      } catch (error) {
+        setErrorMessage('Không thể kết nối đến Server.');
+      }
+    },
+    onError: () => {
+      setErrorMessage('Đăng nhập Google thất bại trên trình duyệt.');
+    }
+  });
+
   const handleLogin = async (e) => {
+    // ... (Giữ nguyên logic đăng nhập bằng form của bạn)
     e.preventDefault(); 
     setErrorMessage(''); 
     try {
@@ -21,7 +57,6 @@ export default function Login() {
         body: JSON.stringify({ email, password })
       });
       const data = await response.json();
-      console.log("Dữ liệu từ API Login:", data);
       if (!response.ok) {
         setErrorMessage(data.message || 'Email hoặc mật khẩu không chính xác!');
         return;
@@ -47,6 +82,7 @@ export default function Login() {
         {errorMessage && <div className="p-3 mb-6 text-sm text-center text-red-200 bg-red-500/20 rounded-xl">{errorMessage}</div>}
         
         <form onSubmit={handleLogin} className="flex flex-col gap-5">
+          {/* ... (Giữ nguyên các input email/password của bạn) ... */}
           <div>
             <label className="block mb-2 text-sm font-medium text-slate-300">Email</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
@@ -76,8 +112,13 @@ export default function Login() {
         <div className="flex items-center gap-3 my-6 text-sm text-slate-500">
           <div className="flex-1 h-px bg-white/10"></div><span>HOẶC</span><div className="flex-1 h-px bg-white/10"></div>
         </div>
-
-        <button className="flex items-center justify-center w-full gap-3 py-3 font-semibold transition-all bg-white text-slate-900 rounded-xl hover:bg-slate-50 hover:scale-[1.02]">
+        
+        {/* Nút Đăng nhập Google đã được gắn sự kiện onClick */}
+        <button 
+          type="button" 
+          onClick={() => loginWithGoogle()} 
+          className="flex items-center justify-center w-full gap-3 py-3 font-semibold transition-all bg-white text-slate-900 rounded-xl hover:bg-slate-50 hover:scale-[1.02] cursor-pointer"
+        >
           <img src={googleLogo} alt="Google" className="w-5 h-5" /> Đăng nhập với Google
         </button>
 

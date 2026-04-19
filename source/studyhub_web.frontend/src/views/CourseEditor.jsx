@@ -17,7 +17,25 @@ export default function CourseEditor() {
   const [openUnitMenu, setOpenUnitMenu] = useState(null);
 
   const toggleUnit = (unitId) => setExpandedUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
-  
+  const isAllLessonsFree = React.useMemo(() => {
+    let totalLessons = 0;
+    let freeLessons = 0;
+    courseData.forEach(unit => {
+      (unit.items || []).forEach(item => {
+        totalLessons++;
+        if (item.isPreview) freeLessons++;
+      });
+    });
+    // Trả về true nếu có bài học và số bài free bằng tổng số bài
+    return totalLessons > 0 && totalLessons === freeLessons;
+  }, [courseData]);
+
+  // Nếu tất cả bài học đều chuyển sang free, tự động reset giá về 0/rỗng
+  useEffect(() => {
+    if (isAllLessonsFree) {
+      setCourseDetails(prev => ({ ...prev, price: '', discountPrice: '' }));
+    }
+  }, [isAllLessonsFree]);
   const handleAddUnit = () => {
     const title = window.prompt("Nhập tên Unit mới:");
     if (title?.trim()) {
@@ -338,13 +356,34 @@ const handleSaveDraft = async () => {
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="block mb-2 text-xs font-bold text-slate-600">Giá gốc (VNĐ)</label>
-                <input type="number" min="0" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="VD: 500000" value={courseDetails.price} onChange={(e) => setCourseDetails({...courseDetails, price: e.target.value})} />
+                <input 
+                  type="number" 
+                  min="0" 
+                  disabled={isAllLessonsFree} // ĐÃ THÊM LỆNH KHÓA Ở ĐÂY
+                  className={`w-full p-2.5 text-sm border rounded-lg outline-none transition-all ${isAllLessonsFree ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'focus:ring-2 focus:ring-blue-500'}`} 
+                  placeholder="VD: 500000" 
+                  value={courseDetails.price} 
+                  onChange={(e) => setCourseDetails({...courseDetails, price: e.target.value})} 
+                />
               </div>
               <div className="flex-1">
                 <label className="block mb-2 text-xs font-bold text-slate-600">Giá giảm (VNĐ)</label>
-                <input type="number" min="0" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="VD: 399000" value={courseDetails.discountPrice} onChange={(e) => setCourseDetails({...courseDetails, discountPrice: e.target.value})} />
+                <input 
+                  type="number" 
+                  min="0" 
+                  disabled={isAllLessonsFree} // ĐÃ THÊM LỆNH KHÓA Ở ĐÂY
+                  className={`w-full p-2.5 text-sm border rounded-lg outline-none transition-all ${isAllLessonsFree ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'focus:ring-2 focus:ring-blue-500'}`} 
+                  placeholder="VD: 399000" 
+                  value={courseDetails.discountPrice} 
+                  onChange={(e) => setCourseDetails({...courseDetails, discountPrice: e.target.value})} 
+                />
               </div>
             </div>
+            {isAllLessonsFree && (
+              <div className="text-[11px] font-bold text-orange-500 bg-orange-50 p-2 rounded-lg border border-orange-100">
+                🔒 Chức năng nhập giá bị khóa do TẤT CẢ bài học đang được thiết lập là "Học thử (Free)".
+              </div>
+            )}
             <div className="pt-4">
               <button onClick={handleSaveDraft} className="w-full py-3.5 font-bold text-white transition-all bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 active:scale-[0.98] cursor-pointer">
                 LƯU THÔNG TIN

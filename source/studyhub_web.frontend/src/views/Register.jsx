@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import googleLogo from '../assets/images/logo_google.png'; 
+import { useGoogleLogin } from '@react-oauth/google'; // Sử dụng hook useGoogleLogin
+import googleLogo from '../assets/images/logo_google.png'; // Import icon Google
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ export default function Register() {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
+  // Hàm xử lý Đăng ký bằng Email/Password thông thường
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -34,6 +36,41 @@ export default function Register() {
       setErrorMessage('Không thể kết nối đến Server.');
     }
   };
+
+  // Khởi tạo hook useGoogleLogin cho phần Đăng ký
+  const registerWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        // Tái sử dụng lại API google login, vì Backend dùng firstOrCreate đã tự động tạo user
+        const response = await fetch('http://localhost:8000/api/login/google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ token: tokenResponse.access_token }) // Sử dụng access_token
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          setErrorMessage(data.message || 'Lỗi xác thực Google từ Server!');
+          return;
+        }
+
+        // Lưu token và đẩy thẳng vào trang chủ học viên sau khi tạo tài khoản Google thành công
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        navigate('/student/home'); 
+        
+      } catch (error) {
+        setErrorMessage('Không thể kết nối đến Server.');
+      }
+    },
+    onError: () => {
+      setErrorMessage('Đăng ký Google thất bại trên trình duyệt.');
+    }
+  });
 
   return (
     <div className="relative flex items-center justify-center min-h-screen overflow-hidden bg-slate-900 font-sans">
@@ -78,8 +115,13 @@ export default function Register() {
           <div className="flex-1 h-px bg-white/10"></div><span>HOẶC</span><div className="flex-1 h-px bg-white/10"></div>
         </div>
 
-        <button className="flex items-center justify-center w-full gap-3 py-3 font-semibold transition-all bg-white text-slate-900 rounded-xl hover:bg-slate-50 hover:scale-[1.02]">
-          <img src={googleLogo} alt="Google" className="w-5 h-5" /> Đăng ký bằng Google
+        {/* Nút Đăng nhập Google */}
+        <button 
+          type="button" 
+          onClick={() => registerWithGoogle()} 
+          className="flex items-center justify-center w-full gap-3 py-3 font-semibold transition-all bg-white text-slate-900 rounded-xl hover:bg-slate-50 hover:scale-[1.02] cursor-pointer"
+        >
+          <img src={googleLogo} alt="Google" className="w-5 h-5" /> Đăng nhập với Google
         </button>
 
         <p className="mt-6 text-sm text-center text-slate-400">

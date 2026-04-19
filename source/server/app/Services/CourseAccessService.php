@@ -18,21 +18,27 @@ class CourseAccessService
                                  ->exists();
         }
 
-        // 2. Lấy dữ liệu bài học gốc từ Database
+        // 2. KIỂM TRA KHÓA HỌC MIỄN PHÍ (MỚI THÊM)
+        // Nếu giá gốc <= 0 HOẶC (có giá giảm và giá giảm <= 0) thì là khóa học Free
+        $price = floatval($course->price);
+        $discountPrice = (isset($course->discountPrice) && $course->discountPrice !== '') ? floatval($course->discountPrice) : $price;
+        $finalPrice = min($price, $discountPrice);
+        $isFreeCourse = ($finalPrice <= 0);
+
+        // 3. Lấy dữ liệu bài học gốc từ Database
         $courseData = $course->courseData; 
 
-        // 3. Tiến hành "Cắt xén" dữ liệu nhạy cảm
+        // 4. Tiến hành "Cắt xén" dữ liệu
         foreach ($courseData as &$unit) {
             foreach ($unit['items'] as &$item) {
                 
-                // Bài học sẽ bị khóa vì chưa mua và không cho học thử (isPreview = false)
-                $isLocked = !$hasPurchased && empty($item['isPreview']);
+                // BÀI HỌC BỊ KHÓA KHI: Chưa mua + Không được học thử + KHÓA HỌC CÓ PHÍ
+                $isLocked = !$hasPurchased && empty($item['isPreview']) && !$isFreeCourse;
                 
                 // Gắn nhãn để React biết đường hiển thị giao diện khóa
                 $item['is_locked'] = $isLocked;
 
-                // QUAN TRỌNG NHẤT: Xóa sạch toàn bộ nội dung (video, quiz) nếu bị khóa
-                // Tránh việc học viên soi tab Network (F12) để lấy trộm link video
+                // Xóa sạch toàn bộ nội dung nếu bị khóa
                 if ($isLocked) {
                     $item['blocks'] = []; 
                 }

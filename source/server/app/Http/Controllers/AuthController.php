@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use MongoDB\Laravel\Eloquent\Model;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -61,5 +62,43 @@ class AuthController extends Controller
             'user' => $user,
             'token' => $token
         ], 200);
+    }
+    public function googleLogin(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string'
+        ]);
+
+        try {
+            // Xác thực token từ React gửi lên thông qua Google API
+            $googleUser = Socialite::driver('google')->stateless()->userFromToken($request->token);
+            
+            // Tìm user theo email, hoặc tạo mới nếu chưa có
+            // Lưu ý: Đảm bảo Model User của bạn đã cho phép fillable các trường 'name', 'email', 'google_id'
+            $user = User::firstOrCreate(
+                ['email' => $googleUser->getEmail()],
+                [
+                    'name' => $googleUser->getName(),
+                    'google_id' => $googleUser->getId(),
+                    // Tạo một password ngẫu nhiên vì user đăng nhập bằng Google
+                    'password' => bcrypt(uniqid()) 
+                ]
+            );
+
+            // Tạo Token của hệ thống (giống như hàm login bình thường của bạn)
+            $token = $user->createToken('studyhub_token')->plainTextToken;
+
+            return response([
+                'user' => $user,
+                'token' => $token,
+                'message' => 'Đăng nhập Google thành công'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response([
+                'message' => 'Xác thực Google thất bại hoặc Token không hợp lệ.',
+                'error' => $e->getMessage()
+            ], 401);
+        }
     }
 }
