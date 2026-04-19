@@ -69,7 +69,7 @@ export default function StudentDashboard() {
           <input
             type="text"
             className="block w-full p-4 pl-12 text-sm text-slate-900 border border-slate-200 rounded-2xl bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm"
-            placeholder="Tìm kiếm khóa học theo tên hoặc tag (VD: React, Laravel...)"
+            placeholder="Nhập từ khóa tìm kiếm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

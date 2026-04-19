@@ -55,10 +55,18 @@ class OderController extends Controller
             return response()->json(['message' => 'Khóa học không tồn tại hoặc chưa xuất bản'], 404);
         }
 
+        // Tính giá hiệu lực: nếu có khuyến mãi thì dùng discountPrice, không thì dùng price gốc
+        $effectivePrice = $course->discountPrice !== null ? (int) $course->discountPrice : (int) ($course->price ?? 0);
+
+        // Chỉ cho phép enroll miễn phí qua API này khi giá hiệu lực = 0
+        if ($effectivePrice > 0) {
+            return response()->json(['message' => 'Khóa học này có phí, vui lòng thanh toán qua trang checkout.'], 400);
+        }
+
         $order = Order::create([
             'user_id'        => $userId,
             'course_id'      => $courseGroupId,
-            'price_paid'     => $course->price ?? 0,
+            'price_paid'     => 0,
             'payment_method' => 'FREE',
             'status'         => 'SUCCESS',
             'progress'       => 0,

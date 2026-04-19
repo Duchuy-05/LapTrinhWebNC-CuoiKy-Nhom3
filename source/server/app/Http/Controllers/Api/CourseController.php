@@ -52,7 +52,7 @@ class CourseController extends Controller
             'blocks' => [],
             'authorId' => auth()->id(), // Bắt buộc lưu ID người tạo
             'price' => 0,
-            'discountPrice' => 0
+            'discountPrice' => null  // null = chưa có khuyến mãi
         ]);
 
         if (!$course) {
@@ -97,8 +97,10 @@ class CourseController extends Controller
             return response()->json(['message' => 'Không tìm thấy bản nháp hoặc bạn không có quyền'], 404);
         }
 
+        // Khi soạn thảo chỉ cho phép cập nhật giá gốc (price).
+        // discountPrice chỉ được đặt sau khi khóa học đã PUBLISHED.
         $draft->update($request->only([
-            'title', 'description', 'thumbnail', 'tags', 'courseData', 'blocks', 'price', 'discountPrice'
+            'title', 'description', 'thumbnail', 'tags', 'courseData', 'blocks', 'price'
         ]));
 
         return response()->json(['message' => 'Đã lưu bản nháp', 'data' => $draft]);
@@ -154,16 +156,17 @@ class CourseController extends Controller
     }
 
     /**
-     * 6. Cập nhật giá
+     * 6. Cập nhật giá khuyến mãi (CHỈ cho khóa học ĐÃ PUBLISHED)
+     *    discountPrice = null  => Không khuyến mãi
+     *    discountPrice = <số> => Giá sau khuyến mãi (phải < price)
      */
     public function updatePrice(Request $request, $courseGroupId)
     {
         $request->validate([
-            'price' => 'required|numeric|min:0',
-            'discountPrice' => 'required|numeric|min:0',
+            'discountPrice' => 'nullable|numeric|min:0',
         ]);
 
-        // Sử dụng authorId để tránh người khác dùng postman đổi giá khóa học (ác)
+        // Lấy bản PUBLISHED của khóa học (chỉ owner mới được cập nhật)
         $courses = Course::where('courseGroupId', $courseGroupId)
                          ->whereIn('status', ['PUBLISHED', 'DRAFT'])
                          ->where('authorId', auth()->id())
@@ -173,14 +176,19 @@ class CourseController extends Controller
             return response()->json(['message' => 'Không có quyền cập nhật'], 403);
         }
 
-        foreach ($courses as $course) {
-            $course->update([
-                'price' => $request->price,
-                'discountPrice' => $request->discountPrice
-            ]);
+        $discountPrice = $request->discountPrice !== null ? (int) $request->discountPrice : null;
+
+        // Validate: giá khuyến mãi phải nhỏ hơn giá gốc
+        $published = $courses->firstWhere('status', 'PUBLISHED');
+        if ($discountPrice !== null && $published && $discountPrice >= $published->price) {
+            return response()->json(['message' => 'Giá khuyến mãi phải nhỏ hơn giá gốc!'], 422);
         }
 
-        return response()->json(['message' => 'Cập nhật giá thành công!']);
+        foreach ($courses as $course) {
+            $course->update(['discountPrice' => $discountPrice]);
+        }
+
+        return response()->json(['message' => 'Cập nhật giá khuyến mãi thành công!']);
     }
 
     /**
@@ -260,7 +268,8 @@ class CourseController extends Controller
             $isEnrolled = !!$order;
         }
 
-        $isFree = ($course->price == 0 || $course->discountPrice == 0);
+        // Miễn phí nếu: giá gốc = 0, HOẶC đang khuyến mãi về 0đ
+        $isFree = ($course->price == 0) || ($course->discountPrice !== null && $course->discountPrice == 0);
 
         return response()->json([
             'data' => $course,

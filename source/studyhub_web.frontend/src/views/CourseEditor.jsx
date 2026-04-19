@@ -6,7 +6,7 @@ export default function CourseEditor() {
   const { courseId } = useParams();
   const navigate = useNavigate();
 
-  const [courseDetails, setCourseDetails] = useState({ title: 'Đang tải...', description: '', thumbnail: null, tags: '', price: '', discountPrice: '' });
+  const [courseDetails, setCourseDetails] = useState({ title: 'Đang tải...', description: '', thumbnail: null, tags: '', price: '' });
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [courseData, setCourseData] = useState([]);
   const [activeItem, setActiveItem] = useState(null);
@@ -87,7 +87,6 @@ export default function CourseEditor() {
           thumbnail: draft.thumbnail || null,
           tags: draft.tags || '',
           price: draft.price || '',
-          discountPrice: draft.discountPrice || ''
         });
 
         const dbCourseData = draft.courseData || [];
@@ -139,17 +138,8 @@ export default function CourseEditor() {
   };
 
 const handleSaveDraft = async () => {
-    // 1. LẤY GIÁ TRỊ VÀ KIỂM TRA LOGIC GIÁ
     const currentPrice = Number(courseDetails.price) || 0;
-    const currentDiscount = Number(courseDetails.discountPrice) || 0;
 
-    // Nếu có nhập giá giảm, thì giá giảm bắt buộc phải NHỎ HƠN giá gốc
-    if (currentDiscount > 0 && currentDiscount >= currentPrice) {
-      alert("Lỗi: Giá giảm (VNĐ) bắt buộc phải nhỏ hơn Giá gốc!");
-      return; // Dừng lại, không cho gọi API lưu
-    }
-
-    // 2. NẾU GIÁ HỢP LỆ THÌ CHO PHÉP LƯU BÌNH THƯỜNG
     try {
       const payload = {
         title: courseDetails.title || '',
@@ -157,16 +147,15 @@ const handleSaveDraft = async () => {
         thumbnail: courseDetails.thumbnail || null,
         tags: courseDetails.tags || '',
         price: currentPrice,
-        discountPrice: currentDiscount,
-        courseData: courseData || [], 
-        blocks: blocksByLesson || {} 
+        courseData: courseData || [],
+        blocks: blocksByLesson || {}
       };
 
       await CourseAPI.updateDraft(courseId, payload);
-      alert("Đã lưu bản nháp thành công!");
+      alert('Đã lưu bản nháp thành công!');
       navigate('/lecturer/courses');
     } catch (error) {
-      alert("Lưu thất bại!");
+      alert('Lưu thất bại!');
     }
   };
 
@@ -335,15 +324,18 @@ const handleSaveDraft = async () => {
               <label className="block mb-2 text-sm font-bold text-slate-600">Từ khóa (Tags)</label>
               <input type="text" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="reactjs, tutorial..." value={courseDetails.tags} onChange={(e) => setCourseDetails({...courseDetails, tags: e.target.value})} />
             </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="block mb-2 text-xs font-bold text-slate-600">Giá gốc (VNĐ)</label>
-                <input type="number" min="0" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="VD: 500000" value={courseDetails.price} onChange={(e) => setCourseDetails({...courseDetails, price: e.target.value})} />
-              </div>
-              <div className="flex-1">
-                <label className="block mb-2 text-xs font-bold text-slate-600">Giá giảm (VNĐ)</label>
-                <input type="number" min="0" className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="VD: 399000" value={courseDetails.discountPrice} onChange={(e) => setCourseDetails({...courseDetails, discountPrice: e.target.value})} />
-              </div>
+            <div>
+              <label className="block mb-1 text-xs font-bold text-slate-600">
+                Giá (VNĐ)
+              </label>
+              <input
+                type="number"
+                min="0"
+                className="w-full p-2.5 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                placeholder="VD: 500000 — để trống nếu miễn phí"
+                value={courseDetails.price}
+                onChange={(e) => setCourseDetails({ ...courseDetails, price: e.target.value })}
+              />
             </div>
             <div className="pt-4">
               <button onClick={handleSaveDraft} className="w-full py-3.5 font-bold text-white transition-all bg-blue-600 rounded-xl shadow-lg hover:bg-blue-700 active:scale-[0.98] cursor-pointer">
