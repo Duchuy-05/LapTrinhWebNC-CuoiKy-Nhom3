@@ -14,6 +14,7 @@ import CoursePlayer from './views/CoursePlayer';
 import CourseDetail from './views/CourseDetail';
 import Statistics from './views/Statistics';
 import Checkout from './views/Checkout';
+import CheckoutResult from './views/CheckoutResult';
 import SearchResults from './views/SearchResults';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="courses/:courseId/learn" element={<CoursePlayer />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
           <Route path="courses/:courseId/checkout" element={<Checkout />} />
+          <Route path="courses/:courseId/checkout/result" element={<CheckoutResult />} />
         </Route>
 
         {/* KHÔNG GIAN GIẢNG DẠY (Chế độ Giảng viên) */}

@@ -13,7 +13,10 @@ class OderController extends Controller
     {
         $userId = auth()->id();
 
-        $orders = Order::where('user_id', $userId)->get();
+        // Chỉ lấy đơn SUCCESS — loại bỏ PENDING (chưa thanh toán) và CANCELED
+        $orders = Order::where('user_id', $userId)
+                       ->where('status', 'SUCCESS')
+                       ->get();
 
         if ($orders->isEmpty()) {
             return response()->json(['data' => []]);
@@ -90,21 +93,48 @@ class OderController extends Controller
             return response()->json(['message' => 'Khóa học không tồn tại'], 404);
         }
 
-        $currentPrice      = $course->price ?? 0;
-        $isDiscountActive  = $course->discountPrice !== null;
-        $finalPrice        = $isDiscountActive ? $course->discountPrice : $currentPrice;
+        // Chặn người đã mua thành công khỏi thanh toán lại
+        $alreadyOwned = Order::where('user_id', $userId)
+                             ->where('course_id', $courseGroupId)
+                             ->where('status', 'SUCCESS')
+                             ->exists();
+        if ($alreadyOwned) {
+            return response()->json(['message' => 'Bạn đã sở hữu khóa học này rồi!'], 400);
+        }
+
+        $currentPrice     = $course->price ?? 0;
+        $isDiscountActive = $course->discountPrice !== null;
+        $finalPrice       = $isDiscountActive ? $course->discountPrice : $currentPrice;
 
         if ($finalPrice <= 0) {
             return response()->json(['message' => 'Khóa học miễn phí, vui lòng dùng API enroll'], 400);
         }
 
-        // Tạo đơn hàng tạm thời (PENDING)
-        $order                  = new Order();
-        $order->user_id         = $userId;
-        $order->course_id       = $courseGroupId;
-        $order->price_paid      = $finalPrice;
-        $order->payment_method  = $paymentMethod;
-        $order->status          = 'PENDING';
+        // Tái sử dụng đơn PENDING còn tồn tại (tránh tạo nhiều đơn trùng khi bấm lại)
+        $existingPending = Order::where('user_id', $userId)
+                                ->where('course_id', $courseGroupId)
+                                ->where('status', 'PENDING')
+                                ->latest()
+                                ->first();
+
+        if ($existingPending && $existingPending->transaction_id) {
+            // Đã có đơn PENDING với transaction_id → thử tạo lại link PayOS từ đơn cũ
+            try {
+                $payUrl = $payOsService->createPaymentLinkFromExisting($existingPending);
+                return response()->json(['payUrl' => $payUrl]);
+            } catch (\Exception $e) {
+                // Nếu link cũ hết hạn hoặc lỗi → hủy đơn cũ, tạo đơn mới bên dưới
+                $existingPending->update(['status' => 'CANCELED']);
+            }
+        }
+
+        // Tạo đơn hàng PENDING mới
+        $order                 = new Order();
+        $order->user_id        = $userId;
+        $order->course_id      = $courseGroupId;
+        $order->price_paid     = $finalPrice;
+        $order->payment_method = $paymentMethod;
+        $order->status         = 'PENDING';
         $order->save();
 
         if ($paymentMethod === 'payos') {
@@ -112,7 +142,6 @@ class OderController extends Controller
                 $payUrl = $payOsService->createPaymentLink($order);
                 return response()->json(['payUrl' => $payUrl]);
             } catch (\Exception $e) {
-                // Rollback đơn hàng PENDING nếu tạo link thất bại
                 $order->delete();
                 return response()->json(['message' => $e->getMessage()], 500);
             }
@@ -126,55 +155,76 @@ class OderController extends Controller
         try {
             $body = $request->all();
 
-            // Bước 1: Xác thực chữ ký – SDK v2 trả về object WebhookData
+            // Bước 1: Xác thực chữ ký
             $webhookData = $payOsService->verifyWebhookData($body);
 
-            // Bước 2: SDK v2 trả về object → dùng -> thay vì ['key']
             if (isset($webhookData->code) && $webhookData->code === '00') {
                 $orderCode  = $webhookData->orderCode;
                 $amountPaid = $webhookData->amount;
 
-                // Bước 3: Tìm đơn hàng PENDING khớp với orderCode
+                // Bước 2: Tìm đơn PENDING khớp orderCode
                 $order = Order::where('transaction_id', $orderCode)
                                ->where('status', 'PENDING')
                                ->first();
 
-                if ($order) {
-                    // Bước 4: Kiểm tra số tiền khớp
-                    if ((int) $order->price_paid === (int) $amountPaid) {
-                        $order->status = 'SUCCESS';
-                        $order->save();
-
-                        $course = Course::where('courseGroupId', $order->course_id)->first();
-                        if ($course) {
-                            $course->increment('student_count');
-                        }
-
-                        return response()->json([
-                            "error"   => 0,
-                            "message" => "Xác nhận thanh toán và mở khóa học thành công",
-                            "data"    => null,
-                        ]);
-                    } else {
-                        \Log::warning("PayOS: Đơn hàng {$order->id} sai số tiền. Yêu cầu: {$order->price_paid}, Thực nhận: {$amountPaid}");
-
-                        return response()->json([
-                            "error"   => 0,
-                            "message" => "Ghi nhận giao dịch, nhưng số tiền không khớp đơn hàng",
-                        ]);
-                    }
+                if (!$order) {
+                    // Đơn đã xử lý trước đó (retry webhook) → idempotent, trả OK
+                    return response()->json(["error" => 0, "message" => "Đơn hàng đã xử lý hoặc không tồn tại"]);
                 }
+
+                // Bước 3: Kiểm tra số tiền
+                if ((int) $order->price_paid !== (int) $amountPaid) {
+                    \Log::warning("PayOS: Đơn {$order->id} sai số tiền. Yêu cầu: {$order->price_paid}, Thực nhận: {$amountPaid}");
+                    return response()->json(["error" => 0, "message" => "Ghi nhận giao dịch, nhưng số tiền không khớp"]);
+                }
+
+                // Bước 4: Cập nhật trạng thái (chỉ khi vẫn là PENDING — chống race condition)
+                // whereStatus('PENDING') đảm bảo nếu 2 webhook đến cùng lúc, chỉ 1 request thành công
+                $updated = Order::where('_id', $order->id)
+                                 ->where('status', 'PENDING')
+                                 ->update(['status' => 'SUCCESS']);
+
+                if ($updated > 0) {
+                    // Chỉ tăng student_count khi chính xác 1 lần
+                    $course = Course::where('courseGroupId', $order->course_id)->first();
+                    if ($course) {
+                        $course->increment('student_count');
+                    }
+
+                    \Log::info("PayOS: Mở khóa thành công đơn {$order->id}, khóa học {$order->course_id}");
+                }
+
+                return response()->json(["error" => 0, "message" => "Xác nhận thanh toán thành công", "data" => null]);
             }
 
-            return response()->json(["error" => 0, "message" => "Đơn hàng đã xử lý hoặc không tồn tại"]);
+            return response()->json(["error" => 0, "message" => "Không phải giao dịch thành công"]);
 
         } catch (\Exception $e) {
             \Log::error("PayOS Webhook Error: " . $e->getMessage());
-
-            return response()->json([
-                "error"   => -1,
-                "message" => "Lỗi xác thực Webhook: " . $e->getMessage(),
-            ]);
+            return response()->json(["error" => -1, "message" => "Lỗi xác thực Webhook: " . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Học viên poll endpoint này sau khi PayOS redirect về để biết đơn đã SUCCESS chưa.
+     * Frontend gọi mỗi 3 giây trên trang /checkout/result
+     */
+    public function getOrderStatus(Request $request, $courseGroupId)
+    {
+        $userId = auth()->id();
+
+        $order = Order::where('user_id', $userId)
+                      ->where('course_id', $courseGroupId)
+                      ->orderBy('created_at', 'desc')
+                      ->first();
+
+        if (!$order) {
+            return response()->json(['status' => 'NOT_FOUND']);
+        }
+
+        return response()->json([
+            'status'    => $order->status,   // PENDING | SUCCESS | CANCELED
+            'pricePaid' => $order->price_paid,
+        ]);
     }
 }

@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Group API dành cho Học viên (Student)
     Route::prefix('student')->group(function () {
         Route::get('/my-courses', [OderController::class, 'myCourses']);
+        Route::get('/courses/{courseGroupId}/order-status', [OderController::class, 'getOrderStatus']);
         
         Route::get('/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
         Route::post('/enroll/{courseGroupId}', [OderController::class, 'enrollCourse']);

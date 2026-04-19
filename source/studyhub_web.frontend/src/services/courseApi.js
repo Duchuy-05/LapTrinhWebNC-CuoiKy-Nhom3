@@ -88,6 +88,10 @@ class CourseAPI {
   static async processCheckout(courseId, paymentMethod) {
     return apiClient.post(`/student/courses/${courseId}/checkout`, { paymentMethod });
   }
+  // Poll sau khi PayOS redirect về trang /checkout/result
+  static async getOrderStatus(courseId) {
+    return apiClient.get(`/student/courses/${courseId}/order-status`);
+  }
   static async searchCourses(params) { 
     // params có dạng: { keyword: 'react', minPrice: 0, maxPrice: 500000, sortBy: 'popular' }
     return apiClient.get('/courses/search', { params: params }); 
