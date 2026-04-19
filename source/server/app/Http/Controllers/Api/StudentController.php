@@ -75,4 +75,49 @@ class StudentController extends Controller
         ]);
     }
 
+    public function search(Request $request)
+    {
+        $keyword = $request->input('keyword');
+        $minPrice = $request->input('minPrice');
+        $maxPrice = $request->input('maxPrice');
+        $sortBy = $request->input('sortBy', 'newest'); // Mặc định là mới nhất
+
+        // Bắt đầu query cơ bản
+        $query = Course::where('status', 'PUBLISHED');
+
+        // 1. Lọc theo từ khóa (nếu có)
+        if (!empty($keyword)) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'regexp', '/' . $keyword . '/i')
+                  ->orWhere('tags', 'regexp', '/' . $keyword . '/i');
+            });
+        }
+
+        // 2. Lọc theo khoảng giá
+        // Lưu ý: Ép kiểu về số nguyên (int) để so sánh chính xác trong MongoDB
+        if ($minPrice !== null && $minPrice !== '') {
+            $query->where('price', '>=', (int) $minPrice);
+        }
+        if ($maxPrice !== null && $maxPrice !== '') {
+            $query->where('price', '<=', (int) $maxPrice);
+        }
+
+        // 3. Sắp xếp
+        switch ($sortBy) {
+            case 'highest_rated':
+                $query->orderBy('rating_score', 'desc');
+                break;
+            case 'popular':
+                $query->orderBy('student_count', 'desc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $courses = $query->get();
+
+        return response()->json($courses);
+    }
 }

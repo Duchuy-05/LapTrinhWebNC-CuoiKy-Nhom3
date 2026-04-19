@@ -88,6 +88,10 @@ class CourseAPI {
   static async processCheckout(courseId, paymentMethod) {
     return apiClient.post(`/student/courses/${courseId}/checkout`, { paymentMethod });
   }
+  static async searchCourses(params) { 
+    // params có dạng: { keyword: 'react', minPrice: 0, maxPrice: 500000, sortBy: 'popular' }
+    return apiClient.get('/courses/search', { params: params }); 
+  }
 }
 
 export default CourseAPI;

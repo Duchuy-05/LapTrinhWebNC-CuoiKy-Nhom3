@@ -14,6 +14,7 @@ import CoursePlayer from './views/CoursePlayer';
 import CourseDetail from './views/CourseDetail';
 import Statistics from './views/Statistics';
 import Checkout from './views/Checkout';
+import SearchResults from './views/SearchResults';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/student" element={<MainLayout mode="student" />}>
           <Route path="home" element={<Home />} />
           <Route path="my-courses" element={<MyCourses />} />
+          <Route path="search" element={<SearchResults />} />
           <Route path="courses/:courseId/learn" element={<CoursePlayer />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
           <Route path="courses/:courseId/checkout" element={<Checkout />} />

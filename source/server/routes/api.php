@@ -23,16 +23,15 @@ Route::get('/courses', function () {
 
 // THÊM MỚI: API xem chi tiết khóa học (Dành cho cả khách vãng lai và học viên)
 // Laravel Sanctum sẽ tự động nhận diện Token (nếu có) để mở khóa video ở Controller
-Route::get('/courses/{courseGroupId}', [CourseController::class, 'showPublishedForStudent']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [FrontendApiController::class, 'register']);
 
-
 Route::get('/student/home', [StudentController::class, 'Home']);
+Route::get('/courses/search', [StudentController::class, 'search']);
 Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
-Route::get('/courses/{courseGroupId}/detail', [App\Http\Controllers\Api\CourseController::class, 'getPublicDetail']);
-
+Route::get('/courses/{courseGroupId}', [CourseController::class, 'showPublishedForStudent']);
+Route::get('/courses/{courseGroupId}/detail', [CourseController::class, 'getPublicDetail']);
 Route::post('/webhook/payos', [OderController::class, 'handlePayOSWebhook']);
 // ==========================================
 // VÙNG API ĐƯỢC BẢO VỆ (Bắt buộc phải có Token)
@@ -43,8 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
     Route::get('/lecturer/statistics', [CourseController::class, 'getStatistics']);
-    // Group API dành cho Giảng viên (Lecturer)
-    // Mẹo: Nếu bạn đã tạo middleware CheckAdmin, hãy bọc thêm nó ở đây (VD: middleware(['auth:sanctum', 'admin']))
+
     Route::prefix('lecturer/courses')->group(function () {
         Route::get('/', [CourseController::class, 'index']); 
         Route::post('/', [CourseController::class, 'store']); 
@@ -65,7 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my-courses', [OderController::class, 'myCourses']);
         
         Route::get('/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
-        Route::post('/enroll/{courseGroupId}', [StudentController::class, 'enroll']);
+        Route::post('/enroll/{courseGroupId}', [OderController::class, 'enrollCourse']);
         Route::post('/courses/{courseGroupId}/progress', [LearnController::class, 'updateProgress']);
         Route::post('/courses/{courseGroupId}/comment', [CommentController::class, 'addCourseReview']);
         Route::post('/courses/{courseGroupId}/checkout', [OderController::class, 'processCheckout'])->middleware('auth:sanctum');
