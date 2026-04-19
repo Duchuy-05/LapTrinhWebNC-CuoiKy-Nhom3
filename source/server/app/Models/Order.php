@@ -9,12 +9,13 @@ class Order extends Model
     protected $collection = 'orders';
 
     protected $fillable = [
-        'user_id',       // ID của học viên
-        'course_id',     // Chính là courseGroupId của khóa học
-        'price_paid',    // Số tiền đã thanh toán (0 nếu là khóa miễn phí)
-        'payment_method',// Phương thức thanh toán (VNPay, Momo, Free...)
-        'status',        // SUCCESS, PENDING, CANCELED
-        'progress',      // Tiến độ học tập (0 - 100%)
+        'user_id',        // ID của học viên
+        'course_id',      // Chính là courseGroupId của khóa học
+        'price_paid',     // Số tiền đã thanh toán (0 nếu là khóa miễn phí)
+        'payment_method', // Phương thức thanh toán (payos, FREE...)
+        'status',         // SUCCESS, PENDING, CANCELED
+        'progress',       // Tiến độ học tập (0 - 100%)
+        'transaction_id', // orderCode từ PayOS — dùng để map webhook về đúng đơn hàng
     ];
 
     protected $casts = [

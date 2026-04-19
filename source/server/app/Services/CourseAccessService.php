@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Order;
+
 class CourseAccessService
 {
     /**
@@ -12,9 +14,11 @@ class CourseAccessService
         // 1. Kiểm tra trạng thái mua hàng của User hiện tại
         $hasPurchased = false;
         if ($user) {
-            $hasPurchased = $user->orders()
-                                 ->where('course_id', $course->id)
-                                 ->where('status', 'paid')
+            // Phải dùng courseGroupId (UUID) — KHÔNG dùng $course->id (MongoDB ObjectId)
+            // Status phải là 'SUCCESS' — KHÔNG phải 'paid' (đó là status cũ đã bỏ)
+            $hasPurchased = Order::where('user_id', $user->id)
+                                 ->where('course_id', $course->courseGroupId)
+                                 ->where('status', 'SUCCESS')
                                  ->exists();
         }
 

@@ -30,10 +30,11 @@ export default function Checkout() {
   if (!course) return <div className="p-20 text-center text-red-500">Không tìm thấy khóa học</div>;
 
   // Logic tính giá
-  const currentPrice = Number(course.price || 0);
+  const originalPrice   = Number(course.price || 0);
   const isDiscountActive = course.discountPrice !== null && course.discountPrice !== undefined;
-  const currentDiscountPrice = isDiscountActive ? Number(course.discountPrice) : currentPrice;
-  const isFree = currentPrice === 0 || (isDiscountActive && currentDiscountPrice === 0);
+  const finalPrice       = isDiscountActive ? Number(course.discountPrice) : originalPrice;
+  // Miễn phí = giá gốc 0đ, HOẶC đang KM về 0đ
+  const isFree = originalPrice === 0 || (isDiscountActive && finalPrice === 0);
 
   const formatMoney = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 
@@ -41,19 +42,18 @@ export default function Checkout() {
     setIsProcessing(true);
     try {
       if (isFree) {
-        // Nếu khóa học miễn phí, gọi API ghi danh luôn (enroll)
         await CourseAPI.enrollCourse(course.courseGroupId);
-        alert("Đăng ký khóa học thành công!");
+        alert('Đăng ký khóa học thành công!');
         navigate(`/student/courses/${course.courseGroupId}/learn`);
       } else {
-        // Gắn cố định phương thức 'payos' vào đây vì chỉ dùng 1 loại
         const response = await CourseAPI.processCheckout(course.courseGroupId, 'payos');
         if (response.data.payUrl) {
           window.location.href = response.data.payUrl;
+          // PayOS sẽ redirect về /student/courses/:id/checkout/result
         }
       }
     } catch (error) {
-      alert(error.response?.data?.message || "Có lỗi xảy ra khi khởi tạo thanh toán.");
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi khởi tạo thanh toán.');
       setIsProcessing(false);
     }
   };
@@ -105,13 +105,16 @@ export default function Checkout() {
             <div className="space-y-3 text-sm mb-6">
               <div className="flex justify-between text-slate-600">
                 <span>Giá gốc:</span>
-                <span className="line-through">{formatMoney(currentPrice)}</span>
+                {/* Chỉ gạch giá gốc khi đang có khuyến mãi */}
+                <span className={isDiscountActive && finalPrice < originalPrice ? 'line-through text-slate-400' : 'font-semibold'}>
+                  {formatMoney(originalPrice)}
+                </span>
               </div>
-              
-              {isDiscountActive && currentDiscountPrice < currentPrice && (
-                <div className="flex justify-between text-green-600">
+
+              {isDiscountActive && finalPrice < originalPrice && (
+                <div className="flex justify-between text-green-600 font-semibold">
                   <span>Khuyến mãi:</span>
-                  <span>- {formatMoney(currentPrice - currentDiscountPrice)}</span>
+                  <span>- {formatMoney(originalPrice - finalPrice)}</span>
                 </div>
               )}
             </div>
@@ -120,7 +123,7 @@ export default function Checkout() {
             <div className="flex justify-between items-center mb-8 pt-4 border-t border-slate-200">
               <span className="font-bold text-slate-800">Tổng thanh toán:</span>
               <span className="text-2xl font-black text-indigo-600">
-                {isFree ? "Miễn phí" : formatMoney(currentDiscountPrice)}
+                {isFree ? 'Miễn phí' : formatMoney(finalPrice)}
               </span>
             </div>
 

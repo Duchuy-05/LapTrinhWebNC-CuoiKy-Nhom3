@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CourseAPI from '../services/courseApi';
 import CourseCard from '../components/CourseCard';
 
 export default function StudentDashboard() {
-  // Banners giữ nguyên (Có thể tạo API lấy banner sau nếu muốn)
   const banners = [
     { id: 1, image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1000&auto=format&fit=crop', title: 'Học Lập Trình Từ Con Số 0', subtitle: 'Giảm giá 50% cho người mới bắt đầu' },
     { id: 2, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1000&auto=format&fit=crop', title: 'Thành Thạo ReactJS 2024', subtitle: 'Khóa học thực chiến với dự án thực tế' },
   ];
 
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [trendingCourses, setTrendingCourses] = useState([]);
   const [recommendedCourses, setRecommendedCourses] = useState([]);
@@ -46,9 +48,40 @@ export default function StudentDashboard() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      // Chuyển hướng sang trang search kèm query string
+      navigate(`/student/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 pb-24 space-y-12">
-      
+      {/* THANH TÌM KIẾM */}
+      <form onSubmit={handleSearch} className="relative w-full max-w-3xl mx-auto">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            className="block w-full p-4 pl-12 text-sm text-slate-900 border border-slate-200 rounded-2xl bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm"
+            placeholder="Nhập từ khóa tìm kiếm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <button 
+            type="submit" 
+            className="text-white absolute right-2.5 bottom-2.5 bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-xl text-sm px-5 py-2 transition-colors"
+          >
+            Tìm kiếm
+          </button>
+        </div>
+      </form>
+
       {/* 1. SLIDER QUẢNG CÁO */}
       <div className="relative w-full h-[300px] md:h-[400px] rounded-3xl overflow-hidden shadow-2xl group">
         {banners.map((banner, index) => (
