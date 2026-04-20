@@ -4,16 +4,29 @@ import { useGoogleLogin } from '@react-oauth/google'; // Sử dụng hook useGoo
 import googleLogo from '../assets/images/logo_google.png'; // Import icon Google
 
 export default function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate();
+
 
   // Hàm xử lý Đăng ký bằng Email/Password thông thường
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setPasswordError('');
+    if (
+      password.length < 6 || 
+      !/[A-Z]/.test(password) || 
+      !/[!@#$%^&*(),.?":{}|<>\-_]/.test(password)
+    ) {
+      // Set lỗi riêng cho password thay vì errorMessage chung
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự, chứa 1 chữ in hoa và 1 ký tự đặc biệt!');
+      return;
+    }
     if (password !== passwordConfirmation) {
       setErrorMessage('Mật khẩu nhập lại không khớp!');
       return;
@@ -22,11 +35,15 @@ export default function Register() {
       const response = await fetch('http://localhost:8000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ email, password, password_confirmation: passwordConfirmation })
+        body: JSON.stringify({ name, email, password, password_confirmation: passwordConfirmation })
       });
       const data = await response.json();
       if (!response.ok) {
-        const errorMsg = data.message || (data.errors ? Object.values(data.errors)[0][0] : 'Đăng ký thất bại!');
+        // Ưu tiên lấy lỗi cụ thể trong mảng errors trước
+        const errorMsg = data.errors 
+          ? Object.values(data.errors)[0][0] 
+          : (data.message || 'Đăng ký thất bại!');
+          
         setErrorMessage(errorMsg);
         return;
       }
@@ -86,6 +103,12 @@ export default function Register() {
         
         <form onSubmit={handleRegister} className="flex flex-col gap-5">
           <div>
+            <label className="block mb-2 text-sm font-medium text-slate-300">Họ và tên</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
+              placeholder="Tên của bạn" />
+          </div>
+          <div>
             <label className="block mb-2 text-sm font-medium text-slate-300">Email</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
@@ -97,6 +120,9 @@ export default function Register() {
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
               placeholder="••••••••" />
+              {passwordError && (
+              <p className="mt-2 text-xs italic text-red-400">{passwordError}</p>
+            )}
           </div>
 
           <div>
@@ -104,7 +130,9 @@ export default function Register() {
             <input type="password" required value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)}
               className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
               placeholder="••••••••" />
+          
           </div>
+
 
           <button type="submit" className="w-full py-3 mt-2 font-bold text-white transition-all bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/30">
             Đăng ký ngay

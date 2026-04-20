@@ -149,11 +149,14 @@ export default function CourseDetail() {
                   ) : (
                     <>
                       <span className="text-4xl font-black text-slate-900">
-                        {Number(course.discountPrice || course.price).toLocaleString()}đ
+                        {(course.discountPrice !== null && course.discountPrice !== undefined
+                          ? Number(course.discountPrice)
+                          : Number(course.price)
+                        ).toLocaleString('vi-VN')}đ
                       </span>
-                      {course.price > course.discountPrice && (
+                      {course.discountPrice !== null && course.discountPrice !== undefined && (
                         <span className="text-lg text-slate-400 line-through">
-                          {Number(course.price).toLocaleString()}đ
+                          {Number(course.price).toLocaleString('vi-VN')}đ
                         </span>
                       )}
                     </>
