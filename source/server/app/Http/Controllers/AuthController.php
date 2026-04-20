@@ -2,127 +2,225 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\EmailVerificationMail;
+use App\Models\EmailVerification;
 use App\Models\User; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
-    // Hàm Đăng ký
+    // ==========================================
+    // BƯỚC 1: Đăng ký - Tạo OTP và gửi email
+    // ==========================================
     public function register(Request $request)
     {
-        // 1. Kiểm tra dữ liệu đầu vào
         $fields = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email',
             'password' => [
                 'required', 
                 'string', 
-                'min:6', // Tối thiểu 6 ký tự
-                'regex:/^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>\-_]).+$/', // Bắt buộc có chữ in hoa và ký tự đặc biệt
+                'min:6',
+                'regex:/^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>\-_]).+$/',
                 'confirmed'
             ]
         ], [
-            'name.required' => 'Vui lòng nhập họ và tên.',
-            'email.unique' => 'Email này đã được đăng ký, vui lòng sử dụng email khác!',
-            'email.required' => 'Vui lòng nhập email.',
+            'name.required'     => 'Vui lòng nhập họ và tên.',
+            'email.required'    => 'Vui lòng nhập email.',
             'password.required' => 'Vui lòng nhập mật khẩu.',
-            'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
-            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
-            'password.regex' => 'Mật khẩu phải chứa ít nhất 1 chữ in hoa và 1 ký tự đặc biệt.',
-            'password.confirmed' => 'Mật khẩu xác nhận không khớp.'
-        ]);
-        // 2. Kiểm tra email đã tồn tại chưa
-        $existingUser = User::where('email', $fields['email'])->first();
-        if ($existingUser) {
-            return response()->json([
-                'errors' => [
-                    'email' => ['Email này đã được đăng ký, vui lòng sử dụng email khác!']
-                ]
-            ], 422); // 422 là mã lỗi Unprocessable Entity chuẩn của Laravel
-        }
-        // 3. Tạo user mới vào database
-        $user = User::create([
-            'name' => $fields['name'],
-            'email' => $fields['email'],
-            'password' => bcrypt($fields['password']), // Mã hóa mật khẩu
-            'role'=> 'user' 
+            'password.confirmed'=> 'Mật khẩu xác nhận không khớp.',
+            'password.min'      => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'password.regex'    => 'Mật khẩu phải chứa ít nhất 1 chữ in hoa và 1 ký tự đặc biệt.',
         ]);
 
-        // 4. Tạo Token
+        // Kiểm tra email đã tồn tại chưa
+        if (User::where('email', $fields['email'])->exists()) {
+            return response()->json([
+                'errors' => ['email' => ['Email này đã được đăng ký, vui lòng sử dụng email khác!']]
+            ], 422);
+        }
+
+        // Tạo mã OTP 6 chữ số
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Xóa bản ghi cũ (nếu có) và lưu OTP mới
+        EmailVerification::where('email', $fields['email'])->delete();
+        EmailVerification::create([
+            'email'      => $fields['email'],
+            'code'       => bcrypt($otp),
+            'name'       => $fields['name'],
+            'password'   => $fields['password'], // Lưu plain text, User model tự hash qua cast 'hashed'
+            'expires_at' => now()->addMinutes(10),
+            'verified'   => false,
+        ]);
+
+        // Gửi email
+        try {
+            Mail::to($fields['email'])->send(new EmailVerificationMail($otp, $fields['name']));
+        } catch (\Exception $e) {
+            Log::error('[EmailVerification] Gửi email thất bại khi đăng ký', [
+                'email' => $fields['email'],
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Không thể gửi email xác nhận. Vui lòng thử lại.',
+            ], 500);
+        }
+
+        return response()->json([
+            'status'  => 'needs_verification',
+            'email'   => $fields['email'],
+            'message' => 'Mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.'
+        ], 200);
+    }
+
+    // ==========================================
+    // BƯỚC 2: Xác thực OTP - Tạo tài khoản
+    // ==========================================
+    public function verifyEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code'  => 'required|string|size:6',
+        ], [
+            'code.required' => 'Vui lòng nhập mã xác nhận.',
+            'code.size'     => 'Mã xác nhận phải có đúng 6 chữ số.',
+        ]);
+
+        $verification = EmailVerification::where('email', $request->email)
+            ->where('verified', false)
+            ->first();
+
+        if (!$verification) {
+            return response()->json([
+                'message' => 'Không tìm thấy yêu cầu xác thực. Vui lòng đăng ký lại.'
+            ], 404);
+        }
+
+        if (now()->isAfter($verification->expires_at)) {
+            $verification->delete();
+            return response()->json([
+                'message' => 'Mã xác nhận đã hết hạn. Vui lòng đăng ký lại.'
+            ], 422);
+        }
+
+        if (!Hash::check($request->code, $verification->code)) {
+            return response()->json([
+                'message' => 'Mã xác nhận không đúng. Vui lòng kiểm tra lại!'
+            ], 422);
+        }
+
+        // Tạo user
+        $user = User::create([
+            'name'     => $verification->name,
+            'email'    => $verification->email,
+            'password' => $verification->password,
+            'role'     => 'user',
+        ]);
+
+        $verification->delete();
         $token = $user->createToken('studyhub_token')->plainTextToken;
 
-        // 5. Trả về cho React
-        return response([
-            'user' => $user,
-            'token' => $token
+        return response()->json([
+            'user'    => $user,
+            'token'   => $token,
+            'message' => 'Xác thực email thành công! Chào mừng bạn đến với StudyHub.'
         ], 201);
     }
 
-    // Hàm Đăng nhập
-    public function login(Request $request)
+    // ==========================================
+    // Gửi lại OTP
+    // ==========================================
+    public function resendOtp(Request $request)
     {
-        $fields = $request->validate([
-            'email' => 'required|string',
-            'password' => 'required|string'
-        ]);
+        $request->validate(['email' => 'required|email']);
 
-        // 1. Tìm user theo email
-        $user = User::where('email', $fields['email'])->first();
+        $verification = EmailVerification::where('email', $request->email)
+            ->where('verified', false)
+            ->first();
 
-        // 2. Kiểm tra mật khẩu
-        if (!$user || !Hash::check($fields['password'], $user->password)) {
-            return response([
-                'message' => 'Email hoặc mật khẩu không chính xác!'
-            ], 401);
+        if (!$verification) {
+            return response()->json([
+                'message' => 'Không tìm thấy yêu cầu xác thực. Vui lòng đăng ký lại.'
+            ], 404);
         }
 
-        // 3. Tạo Token mới
-        $token = $user->createToken('studyhub_token')->plainTextToken;
-
-        // 4. Trả về kết quả
-        return response([
-            'user' => $user,
-            'token' => $token
-        ], 200);
-    }
-    public function googleLogin(Request $request)
-    {
-        $request->validate([
-            'token' => 'required|string'
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $verification->update([
+            'code'       => bcrypt($otp),
+            'expires_at' => now()->addMinutes(10),
         ]);
 
         try {
-            // Xác thực token từ React gửi lên thông qua Google API
+            Mail::to($verification->email)->send(
+                new EmailVerificationMail($otp, $verification->name)
+            );
+        } catch (\Exception $e) {
+            Log::error('[EmailVerification] Gửi email thất bại khi gửi lại OTP', [
+                'email' => $verification->email,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Không thể gửi email. Vui lòng thử lại.'], 500);
+        }
+
+        return response()->json(['message' => 'Mã xác nhận mới đã được gửi đến email của bạn.'], 200);
+    }
+
+    // ==========================================
+    // Đăng nhập
+    // ==========================================
+    public function login(Request $request)
+    {
+        $fields = $request->validate([
+            'email'    => 'required|string',
+            'password' => 'required|string'
+        ]);
+
+        $user = User::where('email', $fields['email'])->first();
+
+        if (!$user || !Hash::check($fields['password'], $user->password)) {
+            return response(['message' => 'Email hoặc mật khẩu không chính xác!'], 401);
+        }
+
+        $token = $user->createToken('studyhub_token')->plainTextToken;
+        return response(['user' => $user, 'token' => $token], 200);
+    }
+
+    // ==========================================
+    // Đăng nhập Google
+    // ==========================================
+    public function googleLogin(Request $request)
+    {
+        $request->validate(['token' => 'required|string']);
+
+        try {
             $googleUser = Socialite::driver('google')->stateless()->userFromToken($request->token);
             
-            // Tìm user theo email, hoặc tạo mới nếu chưa có
-            // Lưu ý: Đảm bảo Model User của bạn đã cho phép fillable các trường 'name', 'email', 'google_id'
             $user = User::firstOrCreate(
                 ['email' => $googleUser->getEmail()],
                 [
-                    'name' => $googleUser->getName(),
+                    'name'      => $googleUser->getName(),
                     'google_id' => $googleUser->getId(),
-                    // Tạo một password ngẫu nhiên vì user đăng nhập bằng Google
-                    'password' => bcrypt(uniqid()) 
+                    'password'  => bcrypt(uniqid()),
+                    'role'      => 'user',
                 ]
             );
 
-            // Tạo Token của hệ thống (giống như hàm login bình thường của bạn)
             $token = $user->createToken('studyhub_token')->plainTextToken;
 
             return response([
-                'user' => $user,
-                'token' => $token,
+                'user'    => $user,
+                'token'   => $token,
                 'message' => 'Đăng nhập Google thành công'
             ], 200);
 
         } catch (\Exception $e) {
             return response([
                 'message' => 'Xác thực Google thất bại hoặc Token không hợp lệ.',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 401);
         }
     }

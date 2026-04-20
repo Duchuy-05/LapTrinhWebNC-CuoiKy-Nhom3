@@ -27,6 +27,8 @@ Route::get('/courses', function () {
 Route::post('/login', [AuthController::class, 'login']);
 //Route::post('/register', [FrontendApiController::class, 'register']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register/verify-email', [AuthController::class, 'verifyEmail']);
+Route::post('/register/resend-otp', [AuthController::class, 'resendOtp']);
 Route::post('/login/google', [AuthController::class, 'googleLogin']);
 
 // Trang chủ & tìm kiếm: công khai, nhưng dùng 'sanctum' guard để nhận token nếu có
