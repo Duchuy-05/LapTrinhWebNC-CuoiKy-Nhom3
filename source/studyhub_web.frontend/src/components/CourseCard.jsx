@@ -66,7 +66,6 @@ const CourseCard = ({ course, badge }) => {
       return <span className="text-green-600 font-bold text-lg">Miễn phí</span>;
     }
 
-    // Đang khuyến mãi → hiện giá KM + gạch giá gốc
     if (isOnSale) {
       return (
         <div className="flex items-center gap-2 flex-wrap">
@@ -107,7 +106,7 @@ const CourseCard = ({ course, badge }) => {
         {/* Cờ SALE — góc trên phải thumbnail */}
         {isOnSale && (
           <span className="absolute top-3 right-3 z-10 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-md flex items-center gap-0.5">
-            🔥 SALE
+            SALE
           </span>
         )}
 
@@ -129,10 +128,13 @@ const CourseCard = ({ course, badge }) => {
         <div className="p-5 flex flex-col flex-1">
           <h3
             onClick={handleGoToDetail}
-            className="font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-indigo-600 h-12 cursor-pointer transition-colors"
+            className="font-bold text-slate-800 line-clamp-2 mb-1 group-hover:text-indigo-600 h-12 cursor-pointer transition-colors"
           >
             {course.title}
           </h3>
+          <p className="text-xs text-indigo-400 font-semibold mb-2 truncate">
+            {course.author_name || 'Giảng viên'}
+          </p>
           <p className="text-xs text-slate-500 mb-4 flex items-center gap-1">
             👤 {course.student_count || 0} học viên
           </p>
@@ -145,7 +147,7 @@ const CourseCard = ({ course, badge }) => {
                 onClick={handleGoToLearn}
                 className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all flex justify-center items-center gap-2 shadow-md cursor-pointer"
               >
-                📖 Vào học ngay
+                Vào học ngay
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -177,7 +179,6 @@ const CourseCard = ({ course, badge }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
           <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-100 text-center">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">🔒</span>
             </div>
             <h3 className="text-xl font-black text-slate-800 mb-2">Bạn chưa đăng nhập</h3>
             <p className="text-sm text-slate-500 mb-6">Vui lòng đăng nhập để đăng ký và bắt đầu học nhé!</p>

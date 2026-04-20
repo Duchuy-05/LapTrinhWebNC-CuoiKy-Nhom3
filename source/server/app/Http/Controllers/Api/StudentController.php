@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\Order; 
+use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -12,12 +13,13 @@ class StudentController extends Controller
 {
     public function Home(Request $request)
     {
-        $userId = auth()->id();
+        // Dùng guard 'sanctum' tường minh — tránh phụ thuộc vào AUTH_GUARD mặc định
+        // Trả về null nếu chưa đăng nhập → trang chủ vẫn hiển thị, chỉ thiếu phần gợi ý
+        $userId    = auth('sanctum')->id();
         $baseQuery = Course::where('status', 'PUBLISHED');
 
         $trendingCourses = (clone $baseQuery)->orderBy('created_at', 'desc')->limit(4)->get();
         $bestSellers     = (clone $baseQuery)->orderBy('student_count', 'desc')->limit(4)->get();
-
 
         $C = (clone $baseQuery)->avg('rating_score') ?? 0;
         $m = (clone $baseQuery)->avg('rating_count') ?? 0;
@@ -26,52 +28,49 @@ class StudentController extends Controller
         $mostLoved = (clone $baseQuery)->get()->map(function ($course) use ($C, $m) {
             $v = $course->rating_count ?? 0;
             $R = $course->rating_score ?? 0;
-
             $course->bayesian_score = (($v * $R) + ($m * $C)) / ($v + $m);
             return $course;
-        })
-        ->sortByDesc('bayesian_score')
-        ->take(4)
-        ->values();
+        })->sortByDesc('bayesian_score')->take(4)->values();
 
-        $recommendedCourses = []; 
+        // Gợi ý cá nhân hóa — chỉ tính khi đã đăng nhập
+        $recommendedCourses = collect();
 
-        try {
-            $purchasedCourseIds = Order::where('user_id', $userId)->pluck('course_id')->toArray();
+        if ($userId) {
+            try {
+                $purchasedCourseIds = Order::where('user_id', $userId)
+                                          ->where('status', 'SUCCESS')
+                                          ->pluck('course_id')
+                                          ->toArray();
 
-            if (!empty($purchasedCourseIds)) {
-                $purchasedCourses = Course::whereIn('courseGroupId', $purchasedCourseIds)->get(['tags']);
-                
-                $favoriteTags = $purchasedCourses->pluck('tags')
-                    ->filter() 
-                    ->flatMap(function ($tagsString) {
-                        return array_map('trim', explode(',', $tagsString));
-                    })
-                    ->unique()
-                    ->filter()
-                    ->toArray();
+                if (!empty($purchasedCourseIds)) {
+                    $purchasedCourses = Course::whereIn('courseGroupId', $purchasedCourseIds)->get(['tags']);
 
-                if (!empty($favoriteTags)) {
-                    $recommendedCourses = (clone $baseQuery)
-                        ->whereNotIn('courseGroupId', $purchasedCourseIds)
-                        ->where(function($query) use ($favoriteTags) {
-                            foreach ($favoriteTags as $tag) {
-                                $query->orWhere('tags', 'like', '%' . $tag . '%');
-                            }
-                        })
-                        ->limit(4)
-                        ->get();
+                    $favoriteTags = $purchasedCourses->pluck('tags')
+                        ->filter()
+                        ->flatMap(fn($t) => array_map('trim', explode(',', $t)))
+                        ->unique()->filter()->toArray();
+
+                    if (!empty($favoriteTags)) {
+                        $recommendedCourses = (clone $baseQuery)
+                            ->whereNotIn('courseGroupId', $purchasedCourseIds)
+                            ->where(function ($q) use ($favoriteTags) {
+                                foreach ($favoriteTags as $tag) {
+                                    $q->orWhere('tags', 'like', '%' . $tag . '%');
+                                }
+                            })
+                            ->limit(4)->get();
+                    }
                 }
+            } catch (\Exception $e) {
+                Log::error('Lỗi thuật toán đề xuất: ' . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            Log::error("Lỗi thuật toán đề xuất: " . $e->getMessage());
         }
 
         return response()->json([
-            'trending'    => $trendingCourses,
-            'bestSellers' => $bestSellers,
-            'mostLoved'   => $mostLoved,
-            'recommended' => $recommendedCourses
+            'trending'    => $this->attachAuthorNames($trendingCourses),
+            'bestSellers' => $this->attachAuthorNames($bestSellers),
+            'mostLoved'   => $this->attachAuthorNames($mostLoved),
+            'recommended' => $this->attachAuthorNames($recommendedCourses),
         ]);
     }
 
@@ -112,7 +111,30 @@ class StudentController extends Controller
             default         => $courses->sortByDesc('created_at'),
         };
 
-        return response()->json($courses->values());
+        return response()->json($this->attachAuthorNames($courses->values()));
+    }
+
+    /**
+     * Gắn thêm trường author_name vào mỗi khóa học.
+     * Dùng 1 query duy nhất (whereIn) để tránh N+1.
+     */
+    private function attachAuthorNames($courses)
+    {
+        $authorIds = $courses->pluck('authorId')->filter()->unique()->values()->toArray();
+
+        if (empty($authorIds)) return $courses;
+
+        // Lấy map: authorId → name (chỉ 1 query)
+        $authorMap = User::whereIn('_id', $authorIds)
+                         ->get(['_id', 'name'])
+                         ->keyBy('_id')
+                         ->map(fn($u) => $u->name);
+
+        return $courses->map(function ($course) use ($authorMap) {
+            $data = is_array($course) ? $course : $course->toArray();
+            $data['author_name'] = $authorMap[$data['authorId'] ?? ''] ?? 'Giảng viên';
+            return $data;
+        });
     }
 
     /**

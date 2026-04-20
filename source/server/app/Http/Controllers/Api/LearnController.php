@@ -19,8 +19,8 @@ class LearnController extends Controller
 
     public function showCourseContent($courseGroupId, Request $request)
     {
-        $user = $request->user('sanctum');
-        
+        $user = $request->user('sanctum'); // null nếu chưa đăng nhập
+
         $course = Course::where('courseGroupId', $courseGroupId)
                         ->where('status', 'PUBLISHED')
                         ->first();
@@ -29,28 +29,81 @@ class LearnController extends Controller
             return response()->json(['message' => 'Khóa học không tồn tại'], 404);
         }
 
-        // 1. Kiểm tra xem user ĐÃ MUA khóa này chưa?
+        // Chưa đăng nhập → chỉ được học thử
+        if (!$user) {
+            $safeCourseData     = $this->accessService->getSanitizedCourseData($course, null);
+            $course->courseData = $safeCourseData;
+
+            return response()->json([
+                'data'             => $course,
+                'access'           => 'trial',
+                'completedLessons' => [],
+            ]);
+        }
+
+        // Đã đăng nhập → kiểm tra đã mua chưa
         $hasPurchased = Order::where('user_id', $user->id)
                              ->where('course_id', $courseGroupId)
                              ->where('status', 'SUCCESS')
                              ->exists();
 
-        // Nếu đã mua -> full, Nếu chưa mua -> trial (học thử)
-        $accessMode = $hasPurchased ? 'full' : 'trial';
-
-        // 2. Đưa data qua Service gác cổng để khóa bài học & xóa video/quiz lậu
-        $safeCourseData = $this->accessService->getSanitizedCourseData($course, $user);
+        $accessMode         = $hasPurchased ? 'full' : 'trial';
+        $safeCourseData     = $this->accessService->getSanitizedCourseData($course, $user);
         $course->courseData = $safeCourseData;
 
-        // 3. Lấy tiến độ học tập (Giả định bạn lưu một mảng các bài đã học trong bảng Order)
-        $order = Order::where('user_id', $user->id)->where('course_id', $courseGroupId)->first();
-        // Nếu bạn có cột completed_lessons kiểu JSON trong bảng orders, nếu không thì để mảng rỗng
-        $completedLessons = $order ? ($order->completed_lessons ?? []) : []; 
+        $order            = Order::where('user_id', $user->id)->where('course_id', $courseGroupId)->first();
+        $completedLessons = $order ? ($order->completed_lessons ?? []) : [];
 
         return response()->json([
-            'data' => $course,
-            'access' => $accessMode,
-            'completedLessons' => $completedLessons
+            'data'             => $course,
+            'access'           => $accessMode,
+            'completedLessons' => $completedLessons,
+        ]);
+    }
+
+    public function updateProgress(Request $request, $courseGroupId)
+    {
+        $user = $request->user('sanctum');
+        if (!$user) {
+            return response()->json(['message' => 'Bạn cần đăng nhập để lưu tiến độ'], 401);
+        }
+
+        $request->validate(['lessonId' => 'required|string']);
+        $lessonId = $request->lessonId;
+
+        // Chỉ học viên đã mua mới được lưu tiến độ
+        $order = Order::where('user_id', $user->id)
+                      ->where('course_id', $courseGroupId)
+                      ->where('status', 'SUCCESS')
+                      ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Bạn chưa sở hữu khóa học này'], 403);
+        }
+
+        // Thêm lessonId vào mảng completed_lessons (không trùng)
+        $completedLessons = $order->completed_lessons ?? [];
+        if (!in_array($lessonId, $completedLessons)) {
+            $completedLessons[] = $lessonId;
+            $order->update(['completed_lessons' => $completedLessons]);
+        }
+
+        // Tính % tiến độ
+        $course       = Course::where('courseGroupId', $courseGroupId)->first();
+        $totalLessons = collect($course->courseData ?? [])
+                            ->flatMap(fn($unit) => $unit['items'] ?? [])
+                            ->count();
+
+        $progressPercent = $totalLessons > 0
+            ? (int) round((count($completedLessons) / $totalLessons) * 100)
+            : 0;
+
+        $order->update(['progress' => $progressPercent]);
+
+        return response()->json([
+            'success'          => true,
+            'completedLessons' => $completedLessons,
+            'progress'         => $progressPercent,
         ]);
     }
 }

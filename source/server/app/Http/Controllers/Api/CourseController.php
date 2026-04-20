@@ -255,7 +255,7 @@ class CourseController extends Controller
         // Lấy thông tin khóa học
         $course = Course::where('courseGroupId', $courseGroupId)->where('status', 'PUBLISHED')->first();
         if (!$course) return response()->json(['message' => 'Không tìm thấy khóa học'], 404);
-
+ 
         // Kiểm tra xem User có đang gửi Token không (để biết đã mua chưa)
         $userId = auth('sanctum')->id();
         $isEnrolled = false;
@@ -267,14 +267,16 @@ class CourseController extends Controller
                         ->first();
             $isEnrolled = !!$order;
         }
-
+ 
         // Miễn phí nếu: giá gốc = 0, HOẶC đang khuyến mãi về 0đ
         $isFree = ($course->price == 0) || ($course->discountPrice !== null && $course->discountPrice == 0);
-
+ 
+        $authorName = \App\Models\User::where('_id', $course->authorId)->value('name') ?? 'Giảng viên';
+ 
         return response()->json([
-            'data' => $course,
+            'data'       => array_merge($course->toArray(), ['author_name' => $authorName]),
             'isEnrolled' => $isEnrolled,
-            'isFree' => $isFree
+            'isFree'     => $isFree,
         ]);
     }
 }
