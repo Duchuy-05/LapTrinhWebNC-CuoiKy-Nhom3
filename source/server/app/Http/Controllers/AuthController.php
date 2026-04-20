@@ -15,21 +15,46 @@ class AuthController extends Controller
     {
         // 1. Kiểm tra dữ liệu đầu vào
         $fields = $request->validate([
-            'email' => 'required|string|unique:users,email', // Kiểm tra 
-            'password' => 'required|string|confirmed' 
-            // Lưu ý: React phải gửi lên trường password_confirmation
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email',
+            'password' => [
+                'required', 
+                'string', 
+                'min:6', // Tối thiểu 6 ký tự
+                'regex:/^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>\-_]).+$/', // Bắt buộc có chữ in hoa và ký tự đặc biệt
+                'confirmed'
+            ]
+        ], [
+            'name.required' => 'Vui lòng nhập họ và tên.',
+            'email.unique' => 'Email này đã được đăng ký, vui lòng sử dụng email khác!',
+            'email.required' => 'Vui lòng nhập email.',
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
+            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
+            'password.regex' => 'Mật khẩu phải chứa ít nhất 1 chữ in hoa và 1 ký tự đặc biệt.',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp.'
         ]);
-
-        // 2. Tạo user mới vào database
+        // 2. Kiểm tra email đã tồn tại chưa
+        $existingUser = User::where('email', $fields['email'])->first();
+        if ($existingUser) {
+            return response()->json([
+                'errors' => [
+                    'email' => ['Email này đã được đăng ký, vui lòng sử dụng email khác!']
+                ]
+            ], 422); // 422 là mã lỗi Unprocessable Entity chuẩn của Laravel
+        }
+        // 3. Tạo user mới vào database
         $user = User::create([
+            'name' => $fields['name'],
             'email' => $fields['email'],
-            'password' => bcrypt($fields['password']) // Mã hóa mật khẩu
+            'password' => bcrypt($fields['password']), // Mã hóa mật khẩu
+            'role'=> 'user' 
         ]);
 
-        // 3. Tạo Token
+        // 4. Tạo Token
         $token = $user->createToken('studyhub_token')->plainTextToken;
 
-        // 4. Trả về cho React
+        // 5. Trả về cho React
         return response([
             'user' => $user,
             'token' => $token

@@ -25,7 +25,8 @@ Route::get('/courses', function () {
 // Laravel Sanctum sẽ tự động nhận diện Token (nếu có) để mở khóa video ở Controller
 
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [FrontendApiController::class, 'register']);
+//Route::post('/register', [FrontendApiController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login/google', [AuthController::class, 'googleLogin']);
 
 Route::get('/student/home', [StudentController::class, 'Home']);

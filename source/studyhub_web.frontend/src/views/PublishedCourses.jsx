@@ -8,6 +8,7 @@ const PublishedCourses = () => {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
+  const currentUser = JSON.parse(localStorage.getItem('user_data') || '{}');
 
   useEffect(() => {
     fetchPublishedCourses();
@@ -140,11 +141,27 @@ const PublishedCourses = () => {
                     {course.description || 'Không có mô tả'}
                   </p>
 
-                  <div className="w-max inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-500 mb-4 bg-blue-50 py-1.5 px-3 rounded-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    {course.unit_count || 0} Units
+                  {/* BỌC 2 THẺ VÀO 1 DIV FLEX NGANG */}
+                  <div className="flex items-center justify-between w-full mb-4">
+                    
+                    {/* Thẻ Unit (Đã bỏ mb-4 ở đây vì đã chuyển lên div cha) */}
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-500 bg-blue-50 py-1.5 px-3 rounded-md">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      {course.unit_count || 0} Units
+                    </div>
+
+                    {/* Thẻ Giảng viên (Đã bỏ ml-auto vì justify-between của div cha đã tự đẩy sang phải) */}
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-slate-100 py-1.5 px-3 rounded-md max-w-[50%]">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="truncate" title={course.lecturer?.name || currentUser.name || "Giảng viên"}>
+                          {course.lecturer?.name || currentUser.name || "Giảng viên"}
+                      </span>
+                    </div>
+
                   </div>
 
                   <div className="mb-4">
