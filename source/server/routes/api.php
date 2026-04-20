@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\OderController;
 use App\Http\Controllers\Api\LearnController;
 use App\Http\Controllers\Api\CommentController;
-use App\Http\Controllers\Api\StatisticsController;
+
 // ==========================================
 // VÙNG API CÔNG CỘNG (Không cần đăng nhập)
 // ==========================================
@@ -29,6 +29,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login/google', [AuthController::class, 'googleLogin']);
 
+// Trang chủ & tìm kiếm: công khai, nhưng dùng 'sanctum' guard để nhận token nếu có
+// Laravel sẽ tự populate auth()->user() nếu Bearer token hợp lệ, không bắt lỗi nếu thiếu
 Route::get('/student/home', [StudentController::class, 'Home']);
 Route::get('/courses/search', [StudentController::class, 'search']);
 Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
@@ -43,10 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    Route::get('/lecturer/statistics', [StatisticsController::class, 'getStatistics']);
-    // Group API dành cho Giảng viên (Lecturer)
-    // Mẹo: Nếu bạn đã tạo middleware CheckAdmin, hãy bọc thêm nó ở đây (VD: middleware(['auth:sanctum', 'admin']))
-
+    Route::get('/lecturer/statistics', [CourseController::class, 'getStatistics']);
 
     Route::prefix('lecturer/courses')->group(function () {
         Route::get('/', [CourseController::class, 'index']); 
@@ -68,7 +67,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my-courses', [OderController::class, 'myCourses']);
         Route::get('/courses/{courseGroupId}/order-status', [OderController::class, 'getOrderStatus']);
         
-        Route::get('/courses/{courseGroupId}/learn', [LearnController::class, 'showCourseContent']);
         Route::post('/enroll/{courseGroupId}', [OderController::class, 'enrollCourse']);
         Route::post('/courses/{courseGroupId}/progress', [LearnController::class, 'updateProgress']);
         Route::post('/courses/{courseGroupId}/comment', [CommentController::class, 'addCourseReview']);
