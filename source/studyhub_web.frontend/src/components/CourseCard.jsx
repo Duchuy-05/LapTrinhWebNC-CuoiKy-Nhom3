@@ -6,17 +6,16 @@ import CourseAPI from '../services/courseApi';
 const CourseCard = ({ course, badge }) => {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // Thêm State để điều khiển Modal Thành công
+  const [showSuccessModal, setShowSuccessModal] = useState(false); 
   const [isEnrolling, setIsEnrolling] = useState(false);
 
   // ── Tính giá ────────────────────────────────────────────────────────────────
-  // discountPrice = null  → chưa KM → học viên trả price gốc
-  // discountPrice = <số>  → đang KM → học viên trả discountPrice
   const originalPrice = Number(course.price || 0);
   const isOnSale = course.discountPrice !== null && course.discountPrice !== undefined;
   const effectivePrice = isOnSale ? Number(course.discountPrice) : originalPrice;
 
-  // Miễn phí = giá gốc là 0 (từ đầu không mất tiền)
-  // Khóa sale về 0đ vẫn đi qua checkout (backend trả về 400 "dùng enroll")
   const isFree = originalPrice === 0;
   const isPurchased = course.is_purchased;
 
@@ -40,8 +39,10 @@ const CourseCard = ({ course, badge }) => {
     setIsEnrolling(true);
     try {
       await CourseAPI.enrollCourse(course.courseGroupId);
-      alert('Đăng ký thành công! Khóa học đã được thêm vào thư viện của bạn.');
-      navigate(`/student/courses/${course.courseGroupId}/learn`);
+      
+      // THAY ĐỔI: Tắt alert() và mở Modal Xịn
+      setShowSuccessModal(true); 
+      
     } catch (error) {
       alert(error.response?.data?.message || 'Có lỗi xảy ra khi đăng ký.');
     } finally {
@@ -61,7 +62,6 @@ const CourseCard = ({ course, badge }) => {
 
   // ── Render giá ───────────────────────────────────────────────────────────────
   const renderPrice = () => {
-    // Giá gốc = 0 → Miễn phí hoàn toàn
     if (originalPrice === 0) {
       return <span className="text-green-600 font-bold text-lg">Miễn phí</span>;
     }
@@ -84,7 +84,6 @@ const CourseCard = ({ course, badge }) => {
       );
     }
 
-    // Giá bình thường
     return (
       <span className="text-indigo-600 font-black text-lg">
         {originalPrice.toLocaleString('vi-VN')}đ
@@ -96,21 +95,18 @@ const CourseCard = ({ course, badge }) => {
     <>
       <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:shadow-xl transition-all group flex flex-col h-full relative">
 
-        {/* Badge do cha truyền vào (VD: "Mới", "Hot") */}
         {badge && (
           <span className="absolute top-3 left-3 z-10 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">
             {badge}
           </span>
         )}
 
-        {/* Cờ SALE — góc trên phải thumbnail */}
         {isOnSale && (
           <span className="absolute top-3 right-3 z-10 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-md flex items-center gap-0.5">
             SALE
           </span>
         )}
 
-        {/* Thumbnail */}
         <div onClick={handleGoToDetail} className="aspect-video overflow-hidden bg-slate-100 relative cursor-pointer">
           <img
             src={course.thumbnail || 'https://via.placeholder.com/350x200?text=StudyHub'}
@@ -124,7 +120,6 @@ const CourseCard = ({ course, badge }) => {
           )}
         </div>
 
-        {/* Nội dung */}
         <div className="p-5 flex flex-col flex-1">
           <h3
             onClick={handleGoToDetail}
@@ -178,9 +173,7 @@ const CourseCard = ({ course, badge }) => {
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
           <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-100 text-center">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            </div>
-            <h3 className="text-xl font-black text-slate-800 mb-2">Bạn chưa đăng nhập</h3>
+            <h3 className="text-xl font-black text-slate-800 mb-2 mt-4">Bạn chưa đăng nhập</h3>
             <p className="text-sm text-slate-500 mb-6">Vui lòng đăng nhập để đăng ký và bắt đầu học nhé!</p>
             <div className="flex flex-col gap-3">
               <button
@@ -194,6 +187,49 @@ const CourseCard = ({ course, badge }) => {
                 className="w-full py-2 text-sm font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 Đóng lại
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ĐĂNG KÝ THÀNH CÔNG (XỊN) */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4 transition-all duration-300">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-slate-100 text-center transform scale-100">
+            
+            {/* Icon Checkmark mượt mà */}
+            <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            <h3 className="text-2xl font-black text-slate-800 mb-2">Tuyệt vời! 🎉</h3>
+            <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+              Bạn đã đăng ký thành công khóa học <br/>
+              <strong className="text-indigo-600 text-base">{course.title}</strong>.<br/>
+              Khóa học đã nằm trong thư viện của bạn.
+            </p>
+            
+            <div className="flex flex-col gap-3">
+              {/* Nút điều hướng vào học ngay */}
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  navigate(`/student/courses/${course.courseGroupId}/learn`);
+                }}
+                className="w-full py-3.5 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 shadow-lg shadow-green-200 transition-all cursor-pointer"
+              >
+                Vào học ngay
+              </button>
+              
+              {/* Nút đóng */}
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full py-2.5 text-sm font-bold text-slate-400 hover:text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                Để học sau
               </button>
             </div>
           </div>

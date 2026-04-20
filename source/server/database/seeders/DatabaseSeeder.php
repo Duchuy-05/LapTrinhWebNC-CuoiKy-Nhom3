@@ -6,23 +6,18 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed the application's database.
+     */
     public function run(): void
     {
         $this->command->info('🌱 Bắt đầu seed dữ liệu...');
 
-<<<<<<< HEAD
-        User::factory()->create([
-            'name' => 'huy',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-            'role' => 'admin',
-
-=======
+        // Gọi các file Seeder con theo đúng thứ tự
         $this->call([
-            UserSeeder::class,    // 1. Users trước
-            CourseSeeder::class,  // 2. Courses cần authorId từ User
-            OrderSeeder::class,   // 3. Orders cần cả User lẫn Course
->>>>>>> 36cc8e0791acd5722f4011cbe65070cf450dcd50
+            UserSeeder::class,
+            CourseSeeder::class,
+            OrderSeeder::class,
         ]);
 
         $this->command->info('✅ Seed hoàn tất!');

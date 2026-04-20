@@ -46,6 +46,8 @@
     }
 
     $adminIncome = $totalRevenue * 0.4; // 40% cho Admin
+
+    arsort($userIncomes);
 @endphp
 {{-- KẾT THÚC TÍNH TOÁN --}}
 
