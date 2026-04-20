@@ -39,10 +39,9 @@
 
                     <div class="form-group">
                         <label>Quyền hạn</label>
-                        <select class="form-control" name="role">
-                            <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>Học viên</option>
-                            <option value="teacher" {{ old('role') == 'teacher' ? 'selected' : '' }}>Giảng viên</option>
-                            <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Quản trị viên</option>
+                        <select name="role" class="form-control">
+                            <option value="user">Người dùng</option>
+                            <option value="admin">Quản trị viên</option>
                         </select>
                     </div>
                 </div>

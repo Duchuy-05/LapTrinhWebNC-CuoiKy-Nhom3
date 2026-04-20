@@ -73,6 +73,7 @@ class OderController extends Controller
             'payment_method' => 'FREE',
             'status'         => 'SUCCESS',
             'progress'       => 0,
+            'paid_at'        => now(), // BỔ SUNG: Lưu thời gian lúc nhận miễn phí
         ]);
 
         $course->increment('student_count');
@@ -132,7 +133,7 @@ class OderController extends Controller
         $order                 = new Order();
         $order->user_id        = $userId;
         $order->course_id      = $courseGroupId;
-        $order->price_paid     = $finalPrice;
+        $order->price_paid     = $finalPrice; // Đã chuẩn tên biến
         $order->payment_method = $paymentMethod;
         $order->status         = 'PENDING';
         $order->save();
@@ -179,10 +180,12 @@ class OderController extends Controller
                 }
 
                 // Bước 4: Cập nhật trạng thái (chỉ khi vẫn là PENDING — chống race condition)
-                // whereStatus('PENDING') đảm bảo nếu 2 webhook đến cùng lúc, chỉ 1 request thành công
                 $updated = Order::where('_id', $order->id)
                                  ->where('status', 'PENDING')
-                                 ->update(['status' => 'SUCCESS']);
+                                 ->update([
+                                     'status'  => 'SUCCESS',
+                                     'paid_at' => now() // BỔ SUNG: Ghi nhận giờ phút thanh toán từ PayOS
+                                 ]);
 
                 if ($updated > 0) {
                     // Chỉ tăng student_count khi chính xác 1 lần
@@ -205,10 +208,6 @@ class OderController extends Controller
         }
     }
 
-    /**
-     * Học viên poll endpoint này sau khi PayOS redirect về để biết đơn đã SUCCESS chưa.
-     * Frontend gọi mỗi 3 giây trên trang /checkout/result
-     */
     public function getOrderStatus(Request $request, $courseGroupId)
     {
         $userId = auth()->id();
@@ -223,7 +222,7 @@ class OderController extends Controller
         }
 
         return response()->json([
-            'status'    => $order->status,   // PENDING | SUCCESS | CANCELED
+            'status'    => $order->status,   
             'pricePaid' => $order->price_paid,
         ]);
     }

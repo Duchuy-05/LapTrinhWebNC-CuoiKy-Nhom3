@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BlockEditor from '../components/BlockEditor'; 
 import CourseAPI from '../services/courseApi'; 
+import Swal from 'sweetalert2'; // BỔ SUNG: Import SweetAlert2
+
 export default function CourseEditor() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ export default function CourseEditor() {
   const [openUnitMenu, setOpenUnitMenu] = useState(null);
 
   const toggleUnit = (unitId) => setExpandedUnits(prev => ({ ...prev, [unitId]: !prev[unitId] }));
+  
   const isAllLessonsFree = React.useMemo(() => {
     let totalLessons = 0;
     let freeLessons = 0;
@@ -26,53 +29,120 @@ export default function CourseEditor() {
         if (item.isPreview) freeLessons++;
       });
     });
-    // Trả về true nếu có bài học và số bài free bằng tổng số bài
     return totalLessons > 0 && totalLessons === freeLessons;
   }, [courseData]);
 
-  // Nếu tất cả bài học đều chuyển sang free, tự động reset giá về 0/rỗng
   useEffect(() => {
     if (isAllLessonsFree) {
       setCourseDetails(prev => ({ ...prev, price: '', discountPrice: '' }));
     }
   }, [isAllLessonsFree]);
-  const handleAddUnit = () => {
-    const title = window.prompt("Nhập tên Unit mới:");
+
+  // --- 1. THÊM UNIT (Đã dùng SweetAlert2) ---
+  const handleAddUnit = async () => {
+    const { value: title } = await Swal.fire({
+      title: 'Thêm Unit mới',
+      input: 'text',
+      inputLabel: 'Nhập tên Unit:',
+      inputPlaceholder: 'VD: Chương 1: Giới thiệu khóa học',
+      showCancelButton: true,
+      confirmButtonText: 'Thêm',
+      cancelButtonText: 'Hủy',
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#94a3b8',
+      inputValidator: (value) => {
+        if (!value || value.trim() === "") {
+          return 'Tên Unit không được để trống!';
+        }
+      }
+    });
+
     if (title?.trim()) {
       const newId = `u${Date.now()}`;
-      setCourseData([...courseData, { id: newId, title, items: [] }]);
+      setCourseData([...courseData, { id: newId, title: title.trim(), items: [] }]);
       setExpandedUnits(prev => ({ ...prev, [newId]: true }));
+      // Thông báo nhẹ góc màn hình
+      Swal.fire({ title: 'Đã thêm Unit!', icon: 'success', timer: 1000, showConfirmButton: false, position: 'top-end', toast: true });
     }
   };
 
-  const handleAddLesson = (unitId) => {
-    const title = window.prompt("Nhập tên bài học mới:");
+  // --- 2. THÊM BÀI HỌC (Đã dùng SweetAlert2) ---
+  const handleAddLesson = async (unitId) => {
+    const { value: title } = await Swal.fire({
+      title: 'Thêm bài học mới',
+      input: 'text',
+      inputLabel: 'Nhập tên bài học:',
+      inputPlaceholder: 'VD: Bài 1: Cài đặt môi trường',
+      showCancelButton: true,
+      confirmButtonText: 'Thêm',
+      cancelButtonText: 'Hủy',
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#94a3b8',
+      inputValidator: (value) => {
+        if (!value || value.trim() === "") {
+          return 'Tên bài học không được để trống!';
+        }
+      }
+    });
+
     if (title?.trim()) {
       const newLessonId = `l${Date.now()}`;
-      setCourseData(courseData.map(u => u.id === unitId ? { ...u, items: [...u.items, { id: newLessonId, title, isPreview: false }] } : u));
+      setCourseData(courseData.map(u => u.id === unitId ? { ...u, items: [...u.items, { id: newLessonId, title: title.trim(), isPreview: false }] } : u));
       setBlocksByLesson(prev => ({ ...prev, [newLessonId]: [] }));
+      Swal.fire({ title: 'Đã thêm bài học!', icon: 'success', timer: 1000, showConfirmButton: false, position: 'top-end', toast: true });
     }
   };
 
-  // --- MENU 3 CHẤM ---
-  const handleEditUnit = (e, unitId, currentTitle) => {
+  // --- 3. ĐỔI TÊN UNIT (Đã dùng SweetAlert2) ---
+  const handleEditUnit = async (e, unitId, currentTitle) => {
     e.stopPropagation(); 
-    const newTitle = window.prompt("Sửa tên Unit:", currentTitle);
+    setOpenUnitMenu(null); 
+    
+    const { value: newTitle } = await Swal.fire({
+      title: 'Đổi tên Unit',
+      input: 'text',
+      inputValue: currentTitle,
+      showCancelButton: true,
+      confirmButtonText: 'Lưu thay đổi',
+      cancelButtonText: 'Hủy',
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#94a3b8',
+      inputValidator: (value) => {
+        if (!value || value.trim() === "") {
+          return 'Tên Unit không được để trống!';
+        }
+      }
+    });
+
     if (newTitle && newTitle.trim()) {
       setCourseData(courseData.map(u => u.id === unitId ? { ...u, title: newTitle.trim() } : u));
+      Swal.fire({ title: 'Đã cập nhật tên!', icon: 'success', timer: 1000, showConfirmButton: false, position: 'top-end', toast: true });
     }
-    setOpenUnitMenu(null); 
   };
 
-  const handleDeleteUnit = (e, unitId) => {
+  // --- 4. XÓA UNIT (Đã dùng SweetAlert2) ---
+  const handleDeleteUnit = async (e, unitId) => {
     e.stopPropagation(); 
-    if (window.confirm("Bạn có chắc chắn muốn xóa Unit này? Toàn bộ bài học bên trong cũng sẽ bị xóa vĩnh viễn.")) {
+    setOpenUnitMenu(null); 
+
+    const result = await Swal.fire({
+      title: 'Xóa Unit này?',
+      text: "Toàn bộ bài học bên trong cũng sẽ bị xóa vĩnh viễn!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Vâng, xóa nó!',
+      cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
       setCourseData(courseData.filter(u => u.id !== unitId));
       if (activeItem && !courseData.filter(u => u.id !== unitId).some(u => u.items.some(i => i.id === activeItem.id))) {
         setActiveItem(null);
       }
+      Swal.fire({ title: 'Đã xóa!', icon: 'success', timer: 1000, showConfirmButton: false });
     }
-    setOpenUnitMenu(null); 
   };
 
   const toggleMenu = (e, unitId) => {
@@ -80,7 +150,7 @@ export default function CourseEditor() {
     setOpenUnitMenu(openUnitMenu === unitId ? null : unitId);
   };
 
-  // --- CHUYỂN ĐỔI CHẾ ĐỘ HỌC THỬ (FREE PREVIEW) ---
+  // --- CHUYỂN ĐỔI CHẾ ĐỘ HỌC THỬ ---
   const handleTogglePreview = () => {
     const newValue = !activeItem.isPreview;
     setActiveItem(prev => ({ ...prev, isPreview: newValue }));
@@ -139,6 +209,7 @@ export default function CourseEditor() {
     if (courseId) fetchDraftData();
   }, [courseId]);
 
+  // --- 5. TẢI ẢNH LÊN (Đã dùng SweetAlert2 báo lỗi) ---
   const handleThumbnailUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -149,16 +220,24 @@ export default function CourseEditor() {
       const imageUrl = response.data.imageUrl;
       setCourseDetails({ ...courseDetails, thumbnail: imageUrl });
     } catch (error) {
-      alert("Không thể tải ảnh lên. Vui lòng kiểm tra lại!");
+      Swal.fire("Lỗi!", "Không thể tải ảnh lên. Vui lòng kiểm tra lại!", "error");
     } finally {
       setIsUploadingThumb(false);
     }
   };
 
-const handleSaveDraft = async () => {
+  // --- 6. LƯU THÔNG TIN (Đã dùng SweetAlert2 Loading) ---
+  const handleSaveDraft = async () => {
     const currentPrice = Number(courseDetails.price) || 0;
 
     try {
+      // Bật loading mượt mà ngăn người dùng click nhiều lần
+      Swal.fire({
+        title: 'Đang lưu thông tin...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
       const payload = {
         title: courseDetails.title || '',
         description: courseDetails.description || '',
@@ -170,10 +249,25 @@ const handleSaveDraft = async () => {
       };
 
       await CourseAPI.updateDraft(courseId, payload);
-      alert('Đã lưu bản nháp thành công!');
-      navigate('/lecturer/courses');
+      
+      Swal.fire({
+        title: 'Thành công!',
+        text: 'Đã lưu thông tin khóa học!',
+        icon: 'success',
+        confirmButtonColor: '#3b82f6',
+        timer: 1500,
+        showConfirmButton: false
+      }).then(() => {
+        navigate('/lecturer/courses');
+      });
+
     } catch (error) {
-      alert('Lưu thất bại!');
+      Swal.fire({
+        title: 'Lưu thất bại!',
+        text: 'Đã có lỗi xảy ra khi lưu vào máy chủ.',
+        icon: 'error',
+        confirmButtonColor: '#ef4444'
+      });
     }
   };
 
@@ -239,7 +333,6 @@ const handleSaveDraft = async () => {
                       className={`flex items-center justify-between p-2.5 pl-8 pr-4 text-xs cursor-pointer hover:bg-blue-50 transition-all ${activeItem?.id === item.id ? 'bg-blue-100 border-l-4 border-blue-600 font-medium' : ''}`}
                     >
                       <span className="line-clamp-1">{item.title}</span>
-                      {/* Hiển thị Badge FREE nếu đang bật Học Thử */}
                       {item.isPreview && <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded shadow-sm font-bold ml-2 shrink-0">FREE</span>}
                     </div>
                   ))}
@@ -256,7 +349,6 @@ const handleSaveDraft = async () => {
         {activeItem ? (
           <div className="flex flex-col h-full">
             
-            {/* THANH CÔNG CỤ: NÚT BẬT TẮT CHẾ ĐỘ HỌC THỬ */}
             <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-b border-slate-200 shrink-0">
               <span className="text-sm font-bold text-slate-500">Cài đặt bài học:</span>
               <label className="flex items-center gap-3 cursor-pointer group">
@@ -275,7 +367,6 @@ const handleSaveDraft = async () => {
               </label>
             </div>
 
-            {/* TRÌNH SOẠN THẢO */}
             <div className="flex-1 overflow-y-auto">
               <BlockEditor 
                 lessonTitle={activeItem.title} 

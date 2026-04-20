@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CourseAPI from '../services/courseApi'; 
+import Swal from 'sweetalert2';
 
 const Courses = () => {
   const navigate = useNavigate();
@@ -54,9 +55,37 @@ const Courses = () => {
   };
 
   const handleAddNewCourse = async () => {
-    const title = window.prompt("Nhập tên khóa học mới:");
-    if (title && title.trim() !== "") {
+    // 1. Mở Hộp thoại SweetAlert2 siêu xịn thay cho window.prompt
+    const { value: title } = await Swal.fire({
+      title: 'Tạo khóa học mới',
+      input: 'text',
+      inputLabel: 'Nhập tên khóa học mới:',
+      inputPlaceholder: 'VD: Lập trình ReactJS cơ bản...',
+      showCancelButton: true,
+      confirmButtonText: 'Tạo ngay',
+      cancelButtonText: 'Hủy bỏ',
+      confirmButtonColor: '#ef4444', // Trùng màu đỏ với nút của bạn
+      cancelButtonColor: '#94a3b8',
+      inputValidator: (value) => {
+        if (!value || value.trim() === "") {
+          return 'Tên khóa học không được để trống!';
+        }
+      }
+    });
+
+    // 2. Nếu Giảng viên đã nhập tên và bấm Tạo ngay
+    if (title) {
       try {
+        // Hiện popup loading cho chuyên nghiệp (ngăn bấm nhiều lần)
+        Swal.fire({
+          title: 'Đang khởi tạo...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Gọi API của bạn
         const response = await CourseAPI.createDraft(title.trim());
         
         const newCourseGroupId = 
@@ -66,14 +95,23 @@ const Courses = () => {
           response.data?._id;
 
         if (!newCourseGroupId) {
-          alert(`Lỗi: Backend KHÔNG trả về ID khóa học!\n\nChi tiết Backend gửi về:\n${JSON.stringify(response.data)}\n\n(Hãy mở Console F12 để xem chi tiết hơn)`);
+          Swal.fire('Lỗi nghiêm trọng!', 'Backend KHÔNG trả về ID khóa học!', 'error');
           return;
         }
 
-        navigate(`/lecturer/courses/${newCourseGroupId}/edit`);
+        // Báo thành công và tự động chuyển trang
+        Swal.fire({
+          title: 'Thành công!',
+          text: 'Khóa học đã được tạo, đang chuyển đến trang chỉnh sửa...',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          navigate(`/lecturer/courses/${newCourseGroupId}/edit`);
+        });
         
       } catch (error) {
-        alert("Có lỗi xảy ra khi gọi API tạo khóa học!");
+        Swal.fire("Lỗi!", "Có lỗi xảy ra khi gọi API tạo khóa học!", "error");
         console.error("Lỗi API chi tiết:", error);
       }
     }
@@ -83,14 +121,54 @@ const Courses = () => {
     navigate(`/lecturer/courses/${courseGroupId}/edit`);
   };
 
+  // --- HÀM XUẤT BẢN ĐÃ ĐƯỢC NÂNG CẤP BẰNG SWEETALERT2 ---
   const handlePublish = async (courseGroupId) => {
-    if(window.confirm("Bạn có chắc chắn muốn xuất bản bản cập nhật của khóa học này?")) {
+    // 1. Hiển thị popup hỏi xác nhận (Confirm Dialog)
+    const result = await Swal.fire({
+      title: 'Xác nhận xuất bản?',
+      text: "Bạn có chắc chắn muốn đưa khóa học này ra hiển thị công khai không?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444', // Trùng màu đỏ với nút Xuất bản của bạn
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Vâng, xuất bản ngay!',
+      cancelButtonText: 'Hủy bỏ'
+    });
+
+    // 2. Nếu người dùng bấm "Vâng, xuất bản ngay!"
+    if (result.isConfirmed) {
       try {
+        // Bật trạng thái xoay vòng Loading...
+        Swal.fire({
+          title: 'Đang xử lý...',
+          text: 'Vui lòng chờ trong giây lát.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Gọi API lên Server
         await CourseAPI.publishCourse(courseGroupId);
-        alert("Xuất bản thành công!");
-        navigate('/lecturer/published-courses'); 
+        
+        // Báo thành công và chuyển trang
+        Swal.fire({
+          title: 'Thành công!',
+          text: 'Khóa học đã chính thức LIVE!',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          navigate('/lecturer/published-courses'); 
+        });
+
       } catch (error) {
-        alert("Lỗi khi xuất bản!");
+        // Báo lỗi nếu API thất bại
+        Swal.fire(
+          'Lỗi xuất bản!',
+          'Hệ thống không thể xuất bản lúc này, vui lòng thử lại sau.',
+          'error'
+        );
         console.error(error);
       }
     }

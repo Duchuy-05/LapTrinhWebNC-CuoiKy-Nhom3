@@ -39,11 +39,11 @@
               <p>Quản lý Users</p>
             </a>
           </li>
-          <li class="nav-item">
+          {{-- <li class="nav-item">
             <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-tags"></i> <p>Quản lý Danh mục</p>
             </a>
-          </li>
+          </li> --}}
           <li class="nav-item">
             <a href="{{ route('admin.courses.index') }}" class="nav-link {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}">
               <i class="nav-icon fas fa-book"></i>
