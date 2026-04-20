@@ -39,7 +39,6 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Class CourseAPI giữ nguyên như cũ
 class CourseAPI {
   static async getLecturerCourses() { return apiClient.get('/lecturer/courses'); } // Lấy tất cả khóa học của giảng viên (bao gồm cả draft và published)
   static async createDraft(title) { return apiClient.post('/lecturer/courses', { title }); } // Tạo khóa học mới ở trạng thái draft với tiêu đề mặc định
@@ -75,27 +74,12 @@ class CourseAPI {
   static async getMyCourses() { return apiClient.get('/student/my-courses'); }
   static async getCourseLearningContent(courseId) { return apiClient.get(`/student/courses/${courseId}/learn`); }
   static async enrollCourse(courseId) { return apiClient.post(`/student/enroll/${courseId}`); }
-  static async updateProgress(courseId, lessonId) {
-    return apiClient.post(`/student/courses/${courseId}/progress`, { lessonId });
-  }
-  static async getCourseDetail(courseId) { 
-    return apiClient.get(`/courses/${courseId}/detail`); 
-  }
-  
-  static async submitCourseComment(courseId, data) { 
-    return apiClient.post(`/student/courses/${courseId}/comment`, data); 
-  }
-  static async processCheckout(courseId, paymentMethod) {
-    return apiClient.post(`/student/courses/${courseId}/checkout`, { paymentMethod });
-  }
-  // Poll sau khi PayOS redirect về trang /checkout/result
-  static async getOrderStatus(courseId) {
-    return apiClient.get(`/student/courses/${courseId}/order-status`);
-  }
-  static async searchCourses(params) { 
-    // params có dạng: { keyword: 'react', minPrice: 0, maxPrice: 500000, sortBy: 'popular' }
-    return apiClient.get('/courses/search', { params: params }); 
-  }
+  static async updateProgress(courseId, lessonId) { return apiClient.post(`/student/courses/${courseId}/progress`, { lessonId }); }
+  static async getCourseDetail(courseId) { return apiClient.get(`/courses/${courseId}/detail`); }
+  static async submitCourseComment(courseId, data) { return apiClient.post(`/student/courses/${courseId}/comment`, data); }
+  static async processCheckout(courseId, paymentMethod) {return apiClient.post(`/student/courses/${courseId}/checkout`, { paymentMethod }); }
+  static async getOrderStatus(courseId) { return apiClient.get(`/student/courses/${courseId}/order-status`); }
+  static async searchCourses(params) { return apiClient.get('/courses/search', { params: params }); }
 }
 
 export default CourseAPI;

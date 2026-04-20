@@ -22,6 +22,7 @@ class StudentController extends Controller
         $perPage         = 4; // số khóa học mỗi trang
         $trendingPage    = max(1, (int) $request->input('trending_page', 1));
         $mostLovedPage   = max(1, (int) $request->input('most_loved_page', 1));
+        $bestSellersPage = max(1, (int) $request->input('best_sellers_page', 1));
 
         // ── Trending (mới nhất) ───────────────────────────────────────────────
         $trendingTotal   = (clone $baseQuery)->count();
@@ -32,7 +33,12 @@ class StudentController extends Controller
             ->get();
 
         // ── Best sellers (bán chạy) — không phân trang, chỉ lấy top 8 ────────
-        $bestSellers = (clone $baseQuery)->orderBy('student_count', 'desc')->limit(8)->get();
+        $bestSellersTotal   = (clone $baseQuery)->count();
+        $bestSellersCourses = (clone $baseQuery)
+            ->orderBy('student_count', 'desc')
+            ->skip(($bestSellersPage - 1) * $perPage)
+            ->limit($perPage)
+            ->get();
 
         // ── Most Loved (Bayesian rating) — phân trang in-memory ──────────────
         $C = (clone $baseQuery)->avg('rating_score') ?? 0;
@@ -98,7 +104,13 @@ class StudentController extends Controller
                 'total'        => $mostLovedTotal,
                 'last_page'    => (int) ceil($mostLovedTotal / $perPage),
             ],
-            'bestSellers' => $this->attachAuthorNames($bestSellers),
+            'bestSellers' => [
+                'data'         => $this->attachAuthorNames($bestSellersCourses),
+                'current_page' => $bestSellersPage,
+                'per_page'     => $perPage,
+                'total'        => $bestSellersTotal,
+                'last_page'    => (int) ceil($bestSellersTotal / $perPage),
+            ],
             'recommended' => $this->attachAuthorNames($recommendedCourses),
         ]);
     }
@@ -145,7 +157,6 @@ class StudentController extends Controller
 
     /**
      * Gắn thêm trường author_name vào mỗi khóa học.
-     * Dùng 1 query duy nhất (whereIn) để tránh N+1.
      */
     private function attachAuthorNames($courses)
     {
@@ -153,7 +164,6 @@ class StudentController extends Controller
 
         if (empty($authorIds)) return $courses;
 
-        // Lấy map: authorId → name (chỉ 1 query)
         $authorMap = User::whereIn('_id', $authorIds)
                          ->get(['_id', 'name'])
                          ->keyBy('_id')
@@ -165,11 +175,9 @@ class StudentController extends Controller
             return $data;
         });
     }
-
+    
     /**
      * Tính giá hiệu lực của khóa học:
-     * - Nếu đang khuyến mãi (discountPrice !== null) → trả về discountPrice
-     * - Nếu không → trả về price gốc
      */
     private function effectivePrice($course): int
     {

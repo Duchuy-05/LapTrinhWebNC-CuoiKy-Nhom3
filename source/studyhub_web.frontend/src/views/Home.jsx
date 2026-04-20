@@ -2,120 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CourseAPI from '../services/courseApi';
 import CourseCard from '../components/CourseCard';
-
-// ── Component phân trang dùng lại ─────────────────────────────────────────────
-function Pagination({ currentPage, lastPage, onPageChange, isLoading }) {
-  if (lastPage <= 1) return null;
-
-  const pages = [];
-  const delta = 1; // số trang hiển thị xung quanh trang hiện tại
-
-  for (let i = 1; i <= lastPage; i++) {
-    if (
-      i === 1 || i === lastPage ||
-      (i >= currentPage - delta && i <= currentPage + delta)
-    ) {
-      pages.push(i);
-    } else if (
-      i === currentPage - delta - 1 ||
-      i === currentPage + delta + 1
-    ) {
-      pages.push('...');
-    }
-  }
-
-  // Loại bỏ dấu "..." trùng nhau liên tiếp
-  const dedupedPages = pages.filter((p, idx) => !(p === '...' && pages[idx - 1] === '...'));
-
-  return (
-    <div className="flex items-center justify-center gap-1 mt-10">
-      {/* Nút Trước */}
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1 || isLoading}
-        className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium
-                   hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600
-                   disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-      >
-        ← Trước
-      </button>
-
-      {/* Số trang */}
-      {dedupedPages.map((page, idx) =>
-        page === '...' ? (
-          <span key={`ellipsis-${idx}`} className="px-3 py-2 text-slate-400 text-sm select-none">
-            ...
-          </span>
-        ) : (
-          <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            disabled={isLoading}
-            className={`w-10 h-10 rounded-lg text-sm font-bold transition-all
-              ${currentPage === page
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105'
-                : 'border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600'
-              } disabled:cursor-not-allowed`}
-          >
-            {page}
-          </button>
-        )
-      )}
-
-      {/* Nút Sau */}
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === lastPage || isLoading}
-        className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium
-                   hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600
-                   disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-      >
-        Sau →
-      </button>
-    </div>
-  );
-}
-
-// ── Component section có phân trang ──────────────────────────────────────────
-function PaginatedSection({ title, subtitle, badge, courses, pagination, onPageChange, isLoading }) {
-  return (
-    <section>
-      <div className="flex items-end justify-between pb-4 mb-8 border-b border-slate-200">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-800">{title}</h2>
-          {subtitle && <p className="mt-2 text-slate-500">{subtitle}</p>}
-        </div>
-        {pagination && (
-          <span className="text-sm text-slate-400 font-medium">
-            Trang {pagination.current_page}/{pagination.last_page}
-            <span className="ml-2 text-slate-300">•</span>
-            <span className="ml-2">{pagination.total} khóa học</span>
-          </span>
-        )}
-      </div>
-
-      {/* Lưới khóa học */}
-      <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 transition-opacity duration-200 ${isLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
-        {courses.length === 0 && !isLoading
-          ? <p className="col-span-4 text-slate-500 text-center py-10">Chưa có khóa học nào.</p>
-          : courses.map(course => (
-              <CourseCard key={course.courseGroupId} course={course} badge={badge} />
-            ))
-        }
-      </div>
-
-      {/* Phân trang */}
-      {pagination && (
-        <Pagination
-          currentPage={pagination.current_page}
-          lastPage={pagination.last_page}
-          onPageChange={onPageChange}
-          isLoading={isLoading}
-        />
-      )}
-    </section>
-  );
-}
+import PaginatedSection from '../components/PaginatedSection'; // THÊM IMPORT NÀY
 
 // ── Trang chủ chính ───────────────────────────────────────────────────────────
 export default function StudentDashboard() {
@@ -131,17 +18,19 @@ export default function StudentDashboard() {
   // Dữ liệu các section
   const [trending, setTrending]         = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
   const [mostLoved, setMostLoved]       = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
-  const [bestSellers, setBestSellers]   = useState([]);
+  const [bestSellers, setBestSellers]   = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
   const [recommended, setRecommended]   = useState([]);
 
   // Loading riêng từng section
   const [initLoading, setInitLoading]         = useState(true);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [mostLovedLoading, setMostLovedLoading] = useState(false);
+  const [bestSellersLoading, setBestSellersLoading] = useState(false);
 
   // Trang hiện tại của từng section
   const [trendingPage, setTrendingPage]   = useState(1);
   const [mostLovedPage, setMostLovedPage] = useState(1);
+  const [bestSellersPage, setBestSellersPage] = useState(1);
 
   // Auto-slide banner
   useEffect(() => {
@@ -154,11 +43,11 @@ export default function StudentDashboard() {
     const fetchAll = async () => {
       try {
         setInitLoading(true);
-        const res = await CourseAPI.getStudentDashboard({ trending_page: 1, most_loved_page: 1 });
+        const res = await CourseAPI.getStudentDashboard({ trending_page: 1, most_loved_page: 1, best_sellers_page: 1 });
         const d = res.data;
         setTrending(d.trending   || { data: [], current_page: 1, last_page: 1, total: 0 });
         setMostLoved(d.mostLoved || { data: [], current_page: 1, last_page: 1, total: 0 });
-        setBestSellers(d.bestSellers || []);
+        setBestSellers(d.bestSellers || { data: [], current_page: 1, last_page: 1, total: 0 });
         setRecommended(d.recommended || []);
       } catch (err) {
         console.error('Lỗi khi tải trang chủ:', err);
@@ -174,31 +63,49 @@ export default function StudentDashboard() {
     setTrendingPage(page);
     setTrendingLoading(true);
     try {
-      const res = await CourseAPI.getStudentDashboard({ trending_page: page, most_loved_page: mostLovedPage });
+      const res = await CourseAPI.getStudentDashboard({ trending_page: page, most_loved_page: mostLovedPage, best_sellers_page: bestSellersPage });
       setTrending(res.data.trending || trending);
     } catch (err) {
-      console.error('Lỗi phân trang Mới nhất:', err);
+      console.error('Lỗi tải trang:', err);
     } finally {
       setTrendingLoading(false);
       // Cuộn đến section
       document.getElementById('section-trending')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [mostLovedPage, trending]);
+  }, [mostLovedPage, bestSellersPage, trending]);
 
   // Đổi trang Yêu thích nhất
   const handleMostLovedPageChange = useCallback(async (page) => {
     setMostLovedPage(page);
     setMostLovedLoading(true);
     try {
-      const res = await CourseAPI.getStudentDashboard({ trending_page: trendingPage, most_loved_page: page });
+      const res = await CourseAPI.getStudentDashboard({ trending_page: trendingPage, most_loved_page: page, best_sellers_page: bestSellersPage });
       setMostLoved(res.data.mostLoved || mostLoved);
     } catch (err) {
-      console.error('Lỗi phân trang Yêu thích:', err);
+      console.error('Lỗi tải trang:', err);
     } finally {
       setMostLovedLoading(false);
       document.getElementById('section-mostloved')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [trendingPage, mostLoved]);
+  }, [trendingPage, bestSellersPage, mostLoved]);
+
+  const handleBestSellersPageChange = useCallback(async (page) => {
+    setBestSellersPage(page);
+    setBestSellersLoading(true);
+    try {
+      const res = await CourseAPI.getStudentDashboard({ 
+        trending_page: trendingPage, 
+        most_loved_page: mostLovedPage,
+        best_sellers_page: page
+      });
+      setBestSellers(res.data.bestSellers || bestSellers);
+    } catch (err) {
+      console.error('Lỗi tải trang:', err);
+    } finally {
+      setBestSellersLoading(false);
+      document.getElementById('section-bestsellers')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [trendingPage, mostLovedPage, bestSellers]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -267,33 +174,18 @@ export default function StudentDashboard() {
             </section>
           )}
 
-          {/* KHÓA HỌC MỚI NHẤT — có phân trang */}
-          <div id="section-trending">
+          {/* KHÓA HỌC BÁN CHẠY — có phân trang */}
+          <div id="section-bestsellers">
             <PaginatedSection
-              title="Khóa Học Mới Nhất"
-              subtitle="Những khóa học vừa được xuất bản trên nền tảng."
-              badge="Mới"
-              courses={trending.data}
-              pagination={trending}
-              onPageChange={handleTrendingPageChange}
-              isLoading={trendingLoading}
+              title="Khóa Học Bán Chạy"
+              subtitle="Được nhiều học viên tin tưởng lựa chọn."
+              badge="Hot"
+              courses={bestSellers.data}
+              pagination={bestSellers}
+              onPageChange={handleBestSellersPageChange}
+              isLoading={bestSellersLoading}
             />
           </div>
-
-          {/* BÁN CHẠY NHẤT — không phân trang */}
-          {bestSellers.length > 0 && (
-            <section>
-              <div className="flex items-end justify-between pb-4 mb-8 border-b border-slate-200">
-                <div>
-                  <h2 className="text-3xl font-bold text-slate-800">Khóa Học Bán Chạy</h2>
-                  <p className="mt-2 text-slate-500">Được nhiều học viên tin tưởng lựa chọn.</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {bestSellers.map(course => <CourseCard key={course.courseGroupId} course={course} badge="Hot" />)}
-              </div>
-            </section>
-          )}
 
           {/* ĐƯỢC YÊU THÍCH NHẤT — có phân trang */}
           <div id="section-mostloved">
@@ -305,6 +197,19 @@ export default function StudentDashboard() {
               pagination={mostLoved}
               onPageChange={handleMostLovedPageChange}
               isLoading={mostLovedLoading}
+            />
+          </div>
+
+          {/* KHÓA HỌC MỚI NHẤT — có phân trang */}
+          <div id="section-trending">
+            <PaginatedSection
+              title="Khóa Học Mới Nhất"
+              subtitle="Những khóa học vừa được xuất bản trên nền tảng."
+              badge="Mới"
+              courses={trending.data}
+              pagination={trending}
+              onPageChange={handleTrendingPageChange}
+              isLoading={trendingLoading}
             />
           </div>
         </>

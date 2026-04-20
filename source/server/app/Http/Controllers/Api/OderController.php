@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Course;
+use App\Models\User;
 
 class OderController extends Controller
 {
@@ -28,11 +29,22 @@ class OderController extends Controller
                          ->where('status', 'PUBLISHED')
                          ->get();
 
+        $authorIds = $courses->pluck('authorId')->filter()->unique()->values()->toArray();
+        $authorMap = [];
+        
+        if (!empty($authorIds)) {
+            $authorMap = User::whereIn('_id', $authorIds)
+                             ->get(['_id', 'name'])
+                             ->keyBy('_id')
+                             ->map(fn($u) => $u->name)
+                             ->toArray();
+        }
         $coursesWithProgress = $courses->map(function ($course) use ($orders) {
             $order = $orders->firstWhere('course_id', $course->courseGroupId);
 
             $courseData = $course->toArray();
             $courseData['progress'] = $order ? ($order->progress ?? 0) : 0;
+            $courseData['author_name'] = $authorMap[$course->authorId ?? ''] ?? 'Giảng viên';
 
             return $courseData;
         });
