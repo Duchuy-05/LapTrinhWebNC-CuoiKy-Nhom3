@@ -18,21 +18,38 @@ class StudentController extends Controller
         $userId    = auth('sanctum')->id();
         $baseQuery = Course::where('status', 'PUBLISHED');
 
-        $trendingCourses = (clone $baseQuery)->orderBy('created_at', 'desc')->limit(4)->get();
-        $bestSellers     = (clone $baseQuery)->orderBy('student_count', 'desc')->limit(4)->get();
+        // ── Tham số phân trang ────────────────────────────────────────────────
+        $perPage         = 4; // số khóa học mỗi trang
+        $trendingPage    = max(1, (int) $request->input('trending_page', 1));
+        $mostLovedPage   = max(1, (int) $request->input('most_loved_page', 1));
 
+        // ── Trending (mới nhất) ───────────────────────────────────────────────
+        $trendingTotal   = (clone $baseQuery)->count();
+        $trendingCourses = (clone $baseQuery)
+            ->orderBy('created_at', 'desc')
+            ->skip(($trendingPage - 1) * $perPage)
+            ->limit($perPage)
+            ->get();
+
+        // ── Best sellers (bán chạy) — không phân trang, chỉ lấy top 8 ────────
+        $bestSellers = (clone $baseQuery)->orderBy('student_count', 'desc')->limit(8)->get();
+
+        // ── Most Loved (Bayesian rating) — phân trang in-memory ──────────────
         $C = (clone $baseQuery)->avg('rating_score') ?? 0;
         $m = (clone $baseQuery)->avg('rating_count') ?? 0;
         $m = $m == 0 ? 1 : $m;
 
-        $mostLoved = (clone $baseQuery)->get()->map(function ($course) use ($C, $m) {
+        $allMostLoved = (clone $baseQuery)->get()->map(function ($course) use ($C, $m) {
             $v = $course->rating_count ?? 0;
             $R = $course->rating_score ?? 0;
             $course->bayesian_score = (($v * $R) + ($m * $C)) / ($v + $m);
             return $course;
-        })->sortByDesc('bayesian_score')->take(4)->values();
+        })->sortByDesc('bayesian_score')->values();
 
-        // Gợi ý cá nhân hóa — chỉ tính khi đã đăng nhập
+        $mostLovedTotal  = $allMostLoved->count();
+        $mostLoved       = $allMostLoved->slice(($mostLovedPage - 1) * $perPage, $perPage)->values();
+
+        // ── Gợi ý cá nhân hóa — chỉ tính khi đã đăng nhập ───────────────────
         $recommendedCourses = collect();
 
         if ($userId) {
@@ -58,7 +75,7 @@ class StudentController extends Controller
                                     $q->orWhere('tags', 'like', '%' . $tag . '%');
                                 }
                             })
-                            ->limit(4)->get();
+                            ->limit(8)->get();
                     }
                 }
             } catch (\Exception $e) {
@@ -67,9 +84,21 @@ class StudentController extends Controller
         }
 
         return response()->json([
-            'trending'    => $this->attachAuthorNames($trendingCourses),
+            'trending' => [
+                'data'         => $this->attachAuthorNames($trendingCourses),
+                'current_page' => $trendingPage,
+                'per_page'     => $perPage,
+                'total'        => $trendingTotal,
+                'last_page'    => (int) ceil($trendingTotal / $perPage),
+            ],
+            'mostLoved' => [
+                'data'         => $this->attachAuthorNames($mostLoved),
+                'current_page' => $mostLovedPage,
+                'per_page'     => $perPage,
+                'total'        => $mostLovedTotal,
+                'last_page'    => (int) ceil($mostLovedTotal / $perPage),
+            ],
             'bestSellers' => $this->attachAuthorNames($bestSellers),
-            'mostLoved'   => $this->attachAuthorNames($mostLoved),
             'recommended' => $this->attachAuthorNames($recommendedCourses),
         ]);
     }

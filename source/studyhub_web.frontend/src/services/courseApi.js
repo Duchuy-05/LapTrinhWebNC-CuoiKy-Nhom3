@@ -71,7 +71,7 @@ class CourseAPI {
     });
   }
 
-  static async getStudentDashboard() { return apiClient.get('/student/home'); }
+  static async getStudentDashboard(params = {}) { return apiClient.get('/student/home', { params }); }
   static async getMyCourses() { return apiClient.get('/student/my-courses'); }
   static async getCourseLearningContent(courseId) { return apiClient.get(`/student/courses/${courseId}/learn`); }
   static async enrollCourse(courseId) { return apiClient.post(`/student/enroll/${courseId}`); }

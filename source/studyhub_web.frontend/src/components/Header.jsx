@@ -39,9 +39,6 @@ export default function CommonHeader({ mode }) {
         {user ? (
           /* TRƯỜNG HỢP: ĐÃ ĐĂNG NHẬP */
           <>
-            <button className="text-slate-400 hover:text-slate-600 relative p-2">
-              🔔 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
             
             <div className="relative group flex items-center justify-center py-2">
               <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md cursor-pointer group-hover:ring-2 ring-blue-500/50 transition-all">

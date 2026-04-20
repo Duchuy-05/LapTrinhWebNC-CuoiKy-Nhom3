@@ -16,11 +16,13 @@ class Order extends Model
         'status',         // SUCCESS, PENDING, CANCELED
         'progress',       // Tiến độ học tập (0 - 100%)
         'transaction_id', // orderCode từ PayOS — dùng để map webhook về đúng đơn hàng
+        'completed_lessons'
     ];
 
     protected $casts = [
         'price_paid' => 'integer',
         'progress' => 'integer',
+        'completed_lessons'  => 'array',
     ];
 
     // Mối quan hệ: Một đơn hàng thuộc về một User
