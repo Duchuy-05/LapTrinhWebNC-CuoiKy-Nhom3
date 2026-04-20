@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CourseAPI from '../services/courseApi';
 import CoursePricingEditor from '../components/CoursePricingEditor';
+import Swal from 'sweetalert2'; // BỔ SUNG: Import SweetAlert2
 
 const PublishedCourses = () => {
   const navigate = useNavigate();
@@ -26,18 +27,41 @@ const PublishedCourses = () => {
     }
   };
 
+  // --- NÂNG CẤP: NÚT NGỪNG XUẤT BẢN DÙNG SWEETALERT2 ---
   const handleUnpublish = async (courseGroupId) => {
-    if (window.confirm('Bạn có chắc chắn muốn ngừng xuất bản? Học viên sẽ không thể tìm thấy khóa học này nữa.')) {
+    const result = await Swal.fire({
+      title: 'Ngừng xuất bản?',
+      text: "Khóa học sẽ bị gỡ khỏi trang chủ và chuyển về dạng Bản nháp. Bạn có chắc chắn không?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Vâng, gỡ xuống!',
+      cancelButtonText: 'Hủy bỏ'
+    });
+
+    if (result.isConfirmed) {
       try {
+        Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+
         await CourseAPI.unpublishCourse(courseGroupId);
-        alert('Đã ngừng xuất bản!');
-        fetchPublishedCourses();
+        
+        Swal.fire({
+          title: 'Đã gỡ xuống!',
+          text: 'Khóa học đã được chuyển về Bản nháp.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        
+        fetchPublishedCourses(); // Tải lại danh sách
       } catch (error) {
-        alert('Lỗi khi thực hiện!');
+        Swal.fire('Lỗi!', 'Không thể ngừng xuất bản lúc này.', 'error');
       }
     }
   };
 
+  // --- NÂNG CẤP: LƯU KHUYẾN MÃI DÙNG TOAST THÔNG BÁO ---
   const handleSavePrice = async (courseGroupId, { discountPrice }) => {
     setSavingId(courseGroupId);
     try {
@@ -49,10 +73,21 @@ const PublishedCourses = () => {
             : c
         )
       );
-      alert(discountPrice !== null ? 'Đã áp dụng khuyến mãi!' : 'Đã xóa khuyến mãi!');
+      
+      // Thông báo Toast trượt ở góc phải siêu xịn
+      Swal.fire({
+        title: 'Thành công!',
+        text: discountPrice !== null ? 'Đã áp dụng khuyến mãi!' : 'Đã xóa khuyến mãi!',
+        icon: 'success',
+        toast: true,
+        position: 'top-end',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
     } catch (error) {
       const msg = error.response?.data?.message || 'Cập nhật thất bại!';
-      alert(msg);
+      Swal.fire('Lỗi!', msg, 'error');
     } finally {
       setSavingId(null);
     }

@@ -34,6 +34,7 @@ Route::get('/student/courses/{courseGroupId}/learn', [LearnController::class, 's
 Route::get('/courses/{courseGroupId}', [CourseController::class, 'showPublishedForStudent']);
 Route::get('/courses/{courseGroupId}/detail', [CourseController::class, 'getPublicDetail']);
 Route::post('/webhook/payos', [OderController::class, 'handlePayOSWebhook']);
+Route::post('/webhook', [\App\Http\Controllers\Admin\OrderController::class, 'payosWebhook']);
 // ==========================================
 // VÙNG API ĐƯỢC BẢO VỆ (Bắt buộc phải có Token)
 // ==========================================
