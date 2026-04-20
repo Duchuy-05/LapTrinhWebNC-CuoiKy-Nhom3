@@ -153,7 +153,7 @@ const PublishedCourses = () => {
                     </div>
 
                     {/* Thẻ Giảng viên (Đã bỏ ml-auto vì justify-between của div cha đã tự đẩy sang phải) */}
-                    <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-slate-100 py-1.5 px-3 rounded-md max-w-[50%]">
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 px-3 max-w-[50%]">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
