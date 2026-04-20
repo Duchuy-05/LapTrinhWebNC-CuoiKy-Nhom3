@@ -92,7 +92,6 @@ export default function StudentDashboard() {
               <span className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-indigo-900 uppercase bg-yellow-400 rounded-full">Sự kiện đặc biệt</span>
               <h2 className="mb-4 text-3xl font-extrabold leading-tight md:text-5xl">{banner.title}</h2>
               <p className="mb-8 text-lg text-slate-300 md:text-xl">{banner.subtitle}</p>
-              <button className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 transition-colors text-white font-bold rounded-xl shadow-lg">Khám phá ngay</button>
             </div>
           </div>
         ))}

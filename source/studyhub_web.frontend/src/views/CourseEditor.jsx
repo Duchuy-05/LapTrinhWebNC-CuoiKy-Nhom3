@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BlockEditor from '../components/BlockEditor'; 
 import CourseAPI from '../services/courseApi'; 
-import Swal from 'sweetalert2'; // BỔ SUNG: Import SweetAlert2
+import Swal from 'sweetalert2'; 
 
 export default function CourseEditor() {
   const { courseId } = useParams();

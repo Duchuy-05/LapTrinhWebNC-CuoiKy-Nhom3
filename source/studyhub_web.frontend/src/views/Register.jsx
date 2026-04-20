@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google'; // Sử dụng hook useGoogleLogin
 import googleLogo from '../assets/images/logo_google.png'; // Import icon Google
+import Swal from 'sweetalert2'; 
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -11,6 +12,7 @@ export default function Register() {
   const [errorMessage, setErrorMessage] = useState('');
   const [passwordError, setPasswordError] = useState('')
   const navigate = useNavigate();
+  const [successMessage, setSuccessMessage] = useState('');
 
 
   // Hàm xử lý Đăng ký bằng Email/Password thông thường
@@ -47,8 +49,13 @@ export default function Register() {
         setErrorMessage(errorMsg);
         return;
       }
-      alert('Đăng ký tài khoản thành công!');
-      navigate('/login'); 
+      setErrorMessage('');
+      setPasswordError('');
+      setSuccessMessage('Đăng ký tài khoản thành công!');
+      setTimeout(() => {
+        navigate('/login');
+      }, 500);
+
     } catch (error) {
       setErrorMessage('Không thể kết nối đến Server.');
     }
@@ -100,7 +107,7 @@ export default function Register() {
       <div className="relative z-10 w-full max-w-md p-10 mx-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <h2 className="mb-8 text-3xl font-bold text-center text-white">Tạo tài khoản</h2>
         {errorMessage && <div className="p-3 mb-6 text-sm text-center text-red-200 bg-red-500/20 rounded-xl">{errorMessage}</div>}
-        
+        {successMessage && <div className="p-3 mb-6 text-sm text-center text-green-200 bg-green-500/30 rounded-xl border border-green-500/30">{successMessage}</div>}
         <form onSubmit={handleRegister} className="flex flex-col gap-5">
           <div>
             <label className="block mb-2 text-sm font-medium text-slate-300">Họ và tên</label>
