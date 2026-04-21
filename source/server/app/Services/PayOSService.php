@@ -30,40 +30,45 @@ class PayOSService
         );
     }
 
-    public function createPaymentLink($order): string
+    public function createPaymentLink($order, string $source = 'web'): string
     {
         $domain = env('FRONTEND_URL', 'http://localhost:5173');
-
         $orderCode = (int) substr(str_replace('.', '', microtime(true)), 0, 10) * 10000 + rand(1000, 9999);
         if ($orderCode > 9007199254740991) {
             $orderCode = rand(100000000, 999999999);
         }
-
-        // Lưu orderCode vào DB để webhook map về đúng đơn hàng
         $order->update(['transaction_id' => $orderCode]);
-
-        return $this->buildPaymentLink($order, $orderCode, $domain);
+        return $this->buildPaymentLink($order, $orderCode, $domain, $source);
     }
 
     /**
      * Tạo lại link PayOS từ đơn PENDING đã có transaction_id (khi user bấm checkout lần 2).
      * Dùng lại orderCode cũ để webhook vẫn map đúng.
      */
-    public function createPaymentLinkFromExisting($order): string
+    public function createPaymentLinkFromExisting($order, string $source = 'web' ): string
     {
         $domain = env('FRONTEND_URL', 'http://localhost:5173');
-        return $this->buildPaymentLink($order, (int) $order->transaction_id, $domain);
+    return $this->buildPaymentLink($order, (int) $order->transaction_id, $domain, $source);
     }
 
-    private function buildPaymentLink($order, int $orderCode, string $domain): string
+    private function buildPaymentLink($order, int $orderCode, string $domain, string $source = 'web'): string
     {
+        $appScheme = env('APP_SCHEME', 'studyhub');
+
+        if ($source === 'app') {
+            $returnUrl = "{$appScheme}://checkout/result?courseId={$order->course_id}&status=success";
+            $cancelUrl = "{$appScheme}://checkout/result?courseId={$order->course_id}&status=cancel";
+        } else {
+            $returnUrl = $domain . "/student/courses/{$order->course_id}/checkout/result";
+            $cancelUrl = $domain . "/student/courses/{$order->course_id}/checkout";
+        }
+
         $paymentData = new CreatePaymentLinkRequest(
             orderCode:   $orderCode,
             amount:      intval($order->price_paid),
             description: "Thanh toan khoa hoc",
-            // returnUrl: trang result để poll trạng thái đơn hàng — KHÔNG về thẳng home
-            returnUrl:   $domain . "/student/courses/{$order->course_id}/checkout/result",
-            cancelUrl:   $domain . "/student/courses/{$order->course_id}/checkout",
+            returnUrl:   $returnUrl,
+            cancelUrl:   $cancelUrl,
         );
 
         try {
