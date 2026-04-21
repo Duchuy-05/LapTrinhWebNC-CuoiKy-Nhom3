@@ -9,21 +9,9 @@
         @method('PUT')
         <div class="card-body">
             
-            <div class="row">
-                <div class="col-md-6 form-group">
-                    <label>Tên khóa học</label>
-                    <input type="text" name="title" class="form-control" value="{{ $course->title }}" required>
-                </div>
-                <div class="col-md-6 form-group">
-                    <label>Danh mục</label>
-                    <select name="category_id" class="form-control" required>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ $course->category_id == $cat->id ? 'selected' : '' }}>
-                                {{ $cat->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+            <div class="form-group">
+                <label>Tên khóa học</label>
+                <input type="text" name="title" class="form-control" value="{{ $course->title }}" required>
             </div>
 
             <div class="row">

@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\Order; // Khai báo Model Order để không bị lỗi 500
+use App\Models\Order; 
+use App\Models\PayoutRequest; // Khai báo thêm PayoutRequest
 use Illuminate\Support\Facades\Hash;
 
 class FrontendApiController extends Controller
@@ -67,7 +68,6 @@ class FrontendApiController extends Controller
     }
 
     // 5. WEBHOOK NHẬN TIỀN TỪ SEPAY
-    // 5. WEBHOOK NHẬN TIỀN TỪ SEPAY
     public function bankingWebhook(Request $request)
     {
         // SỬA Ở ĐÂY: Dùng hàm input() để lấy dữ liệu an toàn, hết gạch đỏ
@@ -97,7 +97,7 @@ class FrontendApiController extends Controller
         return response()->json(['success' => true]); 
     }
 
-    // API KIỂM TRA TRẠNG THÁI ĐƠN HÀNG (Để HTML gọi vào mỗi 3 giây)
+    // 6. API KIỂM TRA TRẠNG THÁI ĐƠN HÀNG (Để HTML gọi vào mỗi 3 giây)
     public function checkOrder($id)
     {
         $order = Order::find($id);
@@ -106,5 +106,37 @@ class FrontendApiController extends Controller
                              ->header('Access-Control-Allow-Origin', '*');
         }
         return response()->json(['success' => false])->header('Access-Control-Allow-Origin', '*');
+    }
+
+    // ========================================================
+    // 7. API XỬ LÝ YÊU CẦU RÚT TIỀN TỪ GIẢNG VIÊN (TỪ REACT)
+    // ========================================================
+    public function requestPayout(Request $request)
+    {
+        try {
+            $bankInfo = $request->input('bankInfo');
+            $amount = $request->input('amount');
+            
+            $teacher = User::first(); 
+
+            PayoutRequest::create([
+                'user_id' => $teacher->id ?? null,
+                'amount' => $amount,
+                'bank_name' => $bankInfo['bankName'],
+                'account_name' => $bankInfo['accountName'],
+                'account_number' => $bankInfo['accountNumber'],
+                'status' => 'pending'
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Đã gửi yêu cầu rút tiền thành công'])->header('Access-Control-Allow-Origin', '*');
+            
+        } catch (\Throwable $e) { // 🛑 SỬA TẠI ĐÂY: Dùng \Throwable để tóm MỌI loại lỗi
+        
+            return response()->json([
+                'status' => 'error', 
+                'message' => 'LỖI THẬT SỰ LÀ: ' . $e->getMessage() . ' (Dòng ' . $e->getLine() . ')'
+            ])->header('Access-Control-Allow-Origin', '*');
+            
+        }
     }
 }

@@ -23,7 +23,8 @@
                 <tr>
                     <th>Ảnh</th>
                     <th>Tên khóa học</th>
-                    <th>Người tạo</th> <th>Giá (VNĐ)</th>
+                    <th>Người tạo</th> 
+                    <th>Giá (VNĐ)</th>
                     <th>Trạng thái</th>
                     <th>Hành động</th>
                 </tr>
@@ -43,7 +44,6 @@
                     
                     @php
                         $authorName = 'Admin';
-                        // Dò tìm ID người tạo (ưu tiên authorId)
                         $userId = $course->authorId ?? $course->user_id ?? $course->author_id ?? null;
                         
                         if ($userId) {
@@ -57,7 +57,6 @@
 
                     @php
                         $originalPrice = (int) ($course->price ?? 0);
-                        // Lấy giá khuyến mãi, nếu là chuỗi rỗng thì cho về null
                         $discountPrice = (isset($course->discountPrice) && $course->discountPrice !== '') ? (int) $course->discountPrice : null;
                         
                         $hasDiscount = ($discountPrice !== null);
@@ -69,7 +68,6 @@
                         @else
                             <span class="text-primary font-weight-bold" style="font-size: 15px;">{{ number_format($finalPrice) }} đ</span>
                             
-                            {{-- Nếu có khuyến mãi và giá KM rẻ hơn giá gốc thì gạch ngang giá gốc --}}
                             @if($hasDiscount && $originalPrice > $finalPrice)
                                 <br><small class="text-muted" style="text-decoration: line-through;">{{ number_format($originalPrice) }} đ</small>
                             @endif
@@ -98,13 +96,21 @@
                                 
                                 <div class="dropdown-divider"></div>
                                 
-                                <form action="{{ route('admin.courses.destroy', $course->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khóa học này cùng toàn bộ hình ảnh của nó?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-trash text-danger mr-2"></i> Xóa
-                                    </button>
-                                </form>
+                                {{-- LOGIC MỚI: Khóa nút xóa nếu đã xuất bản --}}
+                                @if(strtoupper($course->status) == 'PUBLISHED')
+                                    <span class="dropdown-item text-muted" title="Không thể xóa khóa học đang xuất bản" style="cursor: not-allowed; background-color: #f8f9fa;">
+                                        <i class="fas fa-lock text-secondary mr-2"></i> Xóa (Đã khóa)
+                                    </span>
+                                @else
+                                    <form action="{{ route('admin.courses.destroy', $course->id) }}" method="POST" class="form-delete">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button" class="dropdown-item btn-delete">
+                                            <i class="fas fa-trash text-danger mr-2"></i> Xóa
+                                        </button>
+                                    </form>
+                                @endif
+
                             </div>
                         </div>
                     </td>
@@ -115,10 +121,13 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const searchInput = document.getElementById('searchInput');
         
+        // 1. Logic tìm kiếm nhanh
+        const searchInput = document.getElementById('searchInput');
         if(searchInput) {
             searchInput.addEventListener('keyup', function() {
                 let filter = this.value.toLowerCase();
@@ -126,14 +135,56 @@
 
                 rows.forEach(row => {
                     let text = row.innerText.toLowerCase();
-                    if(text.includes(filter)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
+                    row.style.display = text.includes(filter) ? '' : 'none';
                 });
             });
         }
+
+        // 2. Thông báo góc màn hình khi Sửa/Thêm thành công
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Tuyệt vời!',
+                text: "{{ session('success') }}",
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi!',
+                text: "{{ session('error') }}",
+            });
+        @endif
+
+        // 3. Hộp thoại xác nhận xóa xịn sò
+        document.querySelectorAll('.btn-delete').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                let form = this.closest('form');
+                
+                Swal.fire({
+                    title: 'Bạn có chắc chắn?',
+                    text: "Khóa học nháp này và hình ảnh sẽ bị xóa vĩnh viễn!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Vâng, xóa ngay!',
+                    cancelButtonText: 'Hủy bỏ'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                })
+            });
+        });
+
     });
 </script>
 @endsection
