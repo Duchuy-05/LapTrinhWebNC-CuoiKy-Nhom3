@@ -19,7 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:5173'],
+    'allowed_origins' => [
+        'http://localhost:5173',   // Web dev
+        'http://localhost:8082',   // Expo web
+        'http://192.168.1.*',      // Local network (adjust the IP range as needed)
+    ],
     //'allowed_origins' => ['*'],
     'allowed_origins_patterns' => [],
 
