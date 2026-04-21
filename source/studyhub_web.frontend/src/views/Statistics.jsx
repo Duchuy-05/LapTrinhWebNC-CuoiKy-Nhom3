@@ -4,7 +4,7 @@ import {
   AreaChart, Area
 } from 'recharts';
 import CourseAPI from '../services/courseApi';
-import Swal from 'sweetalert2'; // Thêm thư viện thông báo xịn
+import Swal from 'sweetalert2';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -31,28 +31,40 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Statistics() {
+  const currentUser = JSON.parse(localStorage.getItem('user_data')) || {};
+  const currentUserId = currentUser.id || currentUser._id;
+
+  const [isCustomBank, setIsCustomBank] = useState(false);
+  const predefinedBanks = ['Vietcombank', 'Techcombank', 'MBBank', 'Agribank', 'BIDV', 'VietinBank', 'TPBank', 'VIB'];
+
   const [dailyData, setDailyData] = useState([]);
   const [statusData, setStatusData] = useState([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
   const [summary, setSummary] = useState({ total_students: 0, total_revenue: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
-  const [showBankModal, setShowBankModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [activeSettingTab, setActiveSettingTab] = useState('bank'); 
+  
   const [bankInfo, setBankInfo] = useState(null);
   const [withdrawalStatus, setWithdrawalStatus] = useState('idle');
   const [bankForm, setBankForm] = useState({ bankName: 'Vietcombank', accountName: '', accountNumber: '' });
+  const [payoutHistory, setPayoutHistory] = useState([]);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
 
   useEffect(() => {
     fetchStatistics();
-    checkBankInformation();
-  }, []);
+    if (currentUserId) {
+        fetchPayoutHistory();
+        checkBankInformation();
+    }
+  }, [currentUserId]);
 
   const fetchStatistics = async () => {
     try {
       setIsLoading(true);
       const response = await CourseAPI.getStatistics();
       const stats = response.data.data;
-
       setSummary(stats.summary || { total_students: 0, total_revenue: 0 });
 
       const processedDailyData = stats.daily_published.map(item => {
@@ -72,7 +84,6 @@ export default function Statistics() {
          'Doanh thu': item.revenue
       }));
       setMonthlyRevenue(processedRevenue);
-
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu thống kê:", error);
     } finally {
@@ -80,81 +91,112 @@ export default function Statistics() {
     }
   };
 
-  const checkBankInformation = () => {
-    const storedBank = localStorage.getItem('lecturer_bank_info');
-    const storedWithdrawStatus = localStorage.getItem('lecturer_withdraw_status') || 'idle';
+  const fetchPayoutHistory = async () => {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/my-payouts?user_id=${currentUserId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            setPayoutHistory(data.payouts);
+            
+            let withdrawn = 0;
+            let hasPending = false;
+            
+            data.payouts.forEach(p => {
+                // CHỈ CỘNG TIỀN VÀO TỔNG ĐÃ RÚT NẾU ADMIN ĐÃ DUYỆT (completed)
+                if (p.status === 'completed') {
+                    withdrawn += parseFloat(p.amount);
+                }
+                // KIỂM TRA XEM CÓ YÊU CẦU NÀO ĐANG CHỜ KHÔNG
+                if (p.status === 'pending') {
+                    hasPending = true;
+                }
+            });
 
-    setWithdrawalStatus(storedWithdrawStatus);
+            setTotalWithdrawn(withdrawn);
+            setWithdrawalStatus(hasPending ? 'pending' : 'idle'); // Đồng bộ nút bấm theo Database
+        }
+    } catch (error) {
+        console.error("Chưa kết nối được API Lịch sử rút tiền");
+    }
+  };
 
-    if (storedBank) {
-      const parsedBank = JSON.parse(storedBank);
-      if (!parsedBank.bankName || !parsedBank.accountName || !parsedBank.accountNumber) {
-        setShowBankModal(true);
-      } else {
-        setBankInfo(parsedBank);
-        setBankForm(parsedBank);
-      }
-    } else {
-      setShowBankModal(true);
+  const checkBankInformation = async () => {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/get-bank-info?user_id=${currentUserId}`);
+        const data = await response.json();
+        
+        if (data.success && data.bankInfo) {
+            setBankInfo(data.bankInfo);
+            setBankForm(data.bankInfo);
+            if (!predefinedBanks.includes(data.bankInfo.bankName)) {
+                setIsCustomBank(true);
+            } else {
+                setIsCustomBank(false);
+            }
+        } else {
+            setBankInfo(null);
+            setBankForm({ bankName: 'Vietcombank', accountName: '', accountNumber: '' });
+            setIsCustomBank(false);
+        }
+    } catch (error) {
+        console.error("Lỗi lấy thông tin ngân hàng từ CSDL");
     }
   };
 
   const handleNameChange = (e) => {
-    let val = e.target.value;
-    val = val.toUpperCase();
-    val = val.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    val = val.replace(/Đ/g, "D");
-    val = val.replace(/đ/g, "d");
+    let val = e.target.value.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Đ/g, "D");
     setBankForm({ ...bankForm, accountName: val });
   };
 
-  const handleSaveBankInfo = (e) => {
+  const handleSaveBankInfo = async (e) => {
     e.preventDefault();
     if(!bankForm.accountName || !bankForm.accountNumber) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Thiếu thông tin',
-            text: 'Vui lòng điền đầy đủ Tên chủ tài khoản và Số tài khoản!',
-        });
+        Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng điền đầy đủ Tên chủ tài khoản và Số tài khoản!'});
         return;
     }
-
-    localStorage.setItem('lecturer_bank_info', JSON.stringify(bankForm));
-    setBankInfo(bankForm);
-    setShowBankModal(false);
     
-    Swal.fire({
-        icon: 'success',
-        title: 'Thành công',
-        text: 'Đã cập nhật thông tin ngân hàng!',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000
-    });
+    try {
+        const response = await fetch('http://127.0.0.1:8000/api/update-bank-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUserId,
+                bank_name: bankForm.bankName,
+                account_name: bankForm.accountName,
+                account_number: bankForm.accountNumber
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            setBankInfo(bankForm);
+            Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã lưu thông tin ngân hàng vào CSDL an toàn!', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000});
+        } else {
+            Swal.fire('Lỗi', data.message, 'error');
+        }
+    } catch (error) {
+        Swal.fire('Lỗi mạng', 'Không thể kết nối đến máy chủ', 'error');
+    }
   };
 
+  // SỐ DƯ = (TỔNG DOANH THU * 60%) - TỔNG TIỀN ĐÃ NHẬN
+  const totalEarned = summary.total_revenue * 0.6;
+  const walletBalance = Math.max(0, totalEarned - totalWithdrawn); 
+
   const handleWithdrawRequest = () => {
+    if (!bankInfo) {
+        Swal.fire({ icon: 'warning', title: 'Chưa có tài khoản', text: 'Vui lòng cài đặt tài khoản ngân hàng trước khi rút tiền.' });
+        setShowSettingsModal(true);
+        setActiveSettingTab('bank');
+        return;
+    }
     if (walletBalance <= 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Không thể rút tiền',
-            text: 'Ví của bạn hiện chưa có số dư!',
-        });
+        Swal.fire({ icon: 'error', title: 'Không đủ số dư', text: 'Ví của bạn hiện không có số dư khả dụng!' });
         return;
     }
     
     Swal.fire({
-        title: 'Xác nhận rút tiền?',
-        html: `Bạn đang yêu cầu rút <strong>${walletBalance.toLocaleString()} đ</strong> về tài khoản <strong>${bankInfo.bankName}</strong>.`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#f59e0b',
-        cancelButtonColor: '#94a3b8',
-        confirmButtonText: 'Vâng, gửi yêu cầu!',
-        cancelButtonText: 'Hủy bỏ'
-    }).then((result) => {
-        Swal.fire({
         title: 'Xác nhận rút tiền?',
         html: `Bạn đang yêu cầu rút <strong>${walletBalance.toLocaleString()} đ</strong> về tài khoản <strong>${bankInfo.bankName}</strong>.`,
         icon: 'info',
@@ -166,62 +208,58 @@ export default function Statistics() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                // 1. Gọi API gửi sang Laravel
                 const response = await fetch('http://127.0.0.1:8000/api/request-payout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        amount: walletBalance,
-                        bankInfo: bankInfo
-                    })
+                    body: JSON.stringify({ amount: walletBalance, bankInfo: bankInfo, user_id: currentUserId })
                 });
-
-                // 2. ĐỌC KẾT QUẢ TỪ BACKEND
                 const data = await response.json();
 
-                // 3. Xử lý theo đúng Dữ liệu thật
                 if (data.status === 'success') {
-                    // CHỈ KHI BACKEND BÁO THÀNH CÔNG MỚI LƯU TRẠNG THÁI
-                    localStorage.setItem('lecturer_withdraw_status', 'pending');
-                    setWithdrawalStatus('pending');
-                    Swal.fire('Đã gửi!', 'Yêu cầu rút tiền của bạn đã được chuyển tới Admin.', 'success');
+                    Swal.fire('Đã gửi!', 'Yêu cầu rút tiền đang chờ Admin xử lý.', 'success');
+                    fetchPayoutHistory(); // Load lại dữ liệu lập tức
                 } else {
-                    // NẾU BACKEND BÁO LỖI (VD: Thiếu Model, Lỗi DB...) -> Hiển thị lỗi thật
-                    Swal.fire('Lỗi từ Backend', data.message, 'error');
+                    Swal.fire('Lỗi', data.message, 'error');
                 }
-
             } catch (error) {
-                Swal.fire('Lỗi mạng', 'Không thể kết nối đến máy chủ Laravel', 'error');
+                Swal.fire('Lỗi mạng', 'Không thể kết nối đến máy chủ', 'error');
             }
         }
     });
-    });
   };
 
-  const handleCancelWithdraw = () => {
-    Swal.fire({
-        title: 'Hủy yêu cầu?',
-        text: "Bạn có chắc chắn muốn hủy bỏ yêu cầu rút tiền này không?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#94a3b8',
-        confirmButtonText: 'Đồng ý hủy',
-        cancelButtonText: 'Giữ lại yêu cầu'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            localStorage.setItem('lecturer_withdraw_status', 'idle');
-            setWithdrawalStatus('idle');
-            Swal.fire(
-              'Đã hủy!',
-              'Yêu cầu rút tiền của bạn đã được gỡ bỏ.',
-              'success'
-            );
-        }
-    });
+  // HÀM XỬ LÝ KHI BẤM NÚT HỦY YÊU CẦU
+  const handleCancelRequest = () => {
+      Swal.fire({
+          title: 'Hủy yêu cầu?',
+          text: 'Bạn có chắc chắn muốn hủy yêu cầu rút tiền đang chờ duyệt không?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#94a3b8',
+          confirmButtonText: 'Có, hủy ngay!',
+          cancelButtonText: 'Không'
+      }).then(async (result) => {
+          if (result.isConfirmed) {
+              try {
+                  const response = await fetch('http://127.0.0.1:8000/api/cancel-payout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ user_id: currentUserId })
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                      Swal.fire('Đã hủy!', 'Yêu cầu rút tiền của bạn đã bị hủy.', 'success');
+                      fetchPayoutHistory(); // Load lại dữ liệu để mở lại nút rút tiền
+                  } else {
+                      Swal.fire('Lỗi', data.message, 'error');
+                  }
+              } catch (error) {
+                  Swal.fire('Lỗi mạng', 'Không thể kết nối', 'error');
+              }
+          }
+      });
   };
-
-  const walletBalance = summary.total_revenue * 0.6;
 
   if (isLoading) {
     return (
@@ -254,7 +292,7 @@ export default function Statistics() {
              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl">💰</div>
              <div>
                <p className="text-[10px] uppercase font-bold text-green-100 tracking-wider">Tổng doanh thu</p>
-               <p className="text-2xl font-black">{summary.total_revenue.toLocaleString()} đ</p>
+               <p className="text-2xl font-black">{totalEarned.toLocaleString()} đ</p>
              </div>
           </div>
 
@@ -262,26 +300,31 @@ export default function Statistics() {
              <div className="flex justify-between items-start mb-1">
                  <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
-                        <span className="text-amber-500 text-sm">💳</span> Số dư ví (60%)
+                        <span className="text-amber-500 text-sm">💳</span> Số dư ví khả dụng
                     </p>
                     <p className="text-xl font-black text-slate-800">{walletBalance.toLocaleString()} đ</p>
                  </div>
-                 <button onClick={() => setShowBankModal(true)} className="text-blue-500 hover:text-blue-700 text-xs font-bold underline cursor-pointer">
-                     Thay đổi tài khoản
+                 {/* BÁNH RĂNG CÀI ĐẶT */}
+                 <button onClick={() => setShowSettingsModal(true)} title="Cài đặt thanh toán" className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50 cursor-pointer">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
                  </button>
              </div>
 
              {withdrawalStatus === 'pending' ? (
-                 <div className="flex flex-col gap-2 mt-2">
-                     <button disabled className="w-full py-1.5 bg-slate-100 text-slate-400 text-xs font-bold rounded-lg border border-slate-200 cursor-not-allowed">
+                 <div className="mt-2 flex flex-col gap-1.5">
+                     <button disabled className="w-full py-1.5 bg-slate-100 text-slate-500 text-xs font-bold rounded-lg border border-slate-200 cursor-not-allowed">
                          ⏳ Đang chờ Admin duyệt...
                      </button>
-                     <button onClick={handleCancelWithdraw} className="w-full py-1.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors text-xs font-bold rounded-lg border border-red-200 cursor-pointer">
+                     {/* NÚT HỦY YÊU CẦU MỚI THÊM VÀO */}
+                     <button onClick={handleCancelRequest} className="w-full py-1.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors text-xs font-bold rounded-lg border border-red-100 cursor-pointer">
                          ❌ Hủy yêu cầu rút
                      </button>
                  </div>
              ) : (
-                 <button onClick={handleWithdrawRequest} className="w-full mt-2 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors text-xs font-bold rounded-lg cursor-pointer">
+                 <button onClick={handleWithdrawRequest} disabled={walletBalance <= 0} className={`w-full mt-2 py-1.5 text-xs font-bold rounded-lg transition-colors ${walletBalance > 0 ? 'bg-amber-100 text-amber-700 hover:bg-amber-500 hover:text-white cursor-pointer' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
                      💸 Yêu cầu rút doanh thu
                  </button>
              )}
@@ -325,7 +368,6 @@ export default function Statistics() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-
         <div className="bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col group hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-500">
           <div className="mb-6">
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -390,76 +432,116 @@ export default function Statistics() {
         </div>
       </div>
 
-      {showBankModal && (
+      {showSettingsModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-100">
-            <div className="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-              🏦
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-100 overflow-hidden flex flex-col md:flex-row min-h-[400px]">
+            
+            <div className="w-full md:w-1/3 bg-slate-50 p-6 border-r border-slate-200">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-black text-slate-800">Cài đặt</h3>
+                    <button onClick={() => setShowSettingsModal(false)} className="md:hidden text-slate-400 hover:text-red-500">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <button onClick={() => setActiveSettingTab('bank')} className={`text-left px-4 py-3 rounded-xl font-bold text-sm transition-colors ${activeSettingTab === 'bank' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}>
+                        🏦 Ngân hàng nhận
+                    </button>
+                    <button onClick={() => setActiveSettingTab('history')} className={`text-left px-4 py-3 rounded-xl font-bold text-sm transition-colors ${activeSettingTab === 'history' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}>
+                        📜 Lịch sử rút tiền
+                    </button>
+                </div>
             </div>
-            <h3 className="text-2xl font-black text-slate-800 text-center mb-2">Cập nhật tài khoản</h3>
-            <p className="text-sm text-slate-500 text-center mb-6">
-              Bạn cần cung cấp thông tin ngân hàng để nhận thanh toán doanh thu từ StudyHub.
-            </p>
 
-            <form onSubmit={handleSaveBankInfo} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Ngân hàng</label>
-                <select
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-colors"
-                  value={bankForm.bankName}
-                  onChange={(e) => setBankForm({...bankForm, bankName: e.target.value})}
-                >
-                  <option value="Vietcombank">Vietcombank</option>
-                  <option value="Techcombank">Techcombank</option>
-                  <option value="MBBank">MB Bank (Quân Đội)</option>
-                  <option value="Agribank">Agribank</option>
-                  <option value="BIDV">BIDV</option>
-                  <option value="VietinBank">VietinBank</option>
-                  <option value="TPBank">TPBank</option>
-                  <option value="VIB">VIB</option>
-                </select>
-              </div>
+            <div className="w-full md:w-2/3 p-6 md:p-8 relative">
+                <button onClick={() => setShowSettingsModal(false)} className="absolute top-4 right-4 hidden md:block text-slate-400 hover:text-red-500">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Tên chủ tài khoản (In hoa không dấu)</label>
-                <input
-                  type="text"
-                  placeholder="NGUYEN VAN A"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-colors"
-                  value={bankForm.accountName}
-                  onChange={handleNameChange}
-                  required
-                />
-              </div>
+                {activeSettingTab === 'bank' && (
+                    <div className="animate-fadeIn">
+                        <h4 className="text-lg font-bold text-slate-800 mb-4">Cập nhật tài khoản</h4>
+                        <form onSubmit={handleSaveBankInfo} className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Ngân hàng</label>
+                                <select 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white" 
+                                    value={isCustomBank ? 'other' : bankForm.bankName} 
+                                    onChange={(e) => {
+                                        if (e.target.value === 'other') {
+                                            setIsCustomBank(true);
+                                            setBankForm({...bankForm, bankName: ''}); 
+                                        } else {
+                                            setIsCustomBank(false);
+                                            setBankForm({...bankForm, bankName: e.target.value});
+                                        }
+                                    }}
+                                >
+                                    {predefinedBanks.map(bank => (
+                                        <option key={bank} value={bank}>{bank}</option>
+                                    ))}
+                                    <option value="other" className="font-bold text-blue-600">Ngân hàng khác (Nhập tay)...</option>
+                                </select>
+                                
+                                {isCustomBank && (
+                                    <input 
+                                        type="text" 
+                                        placeholder="Vui lòng nhập tên Ngân hàng / Ví điện tử..." 
+                                        className="w-full mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl outline-none focus:border-blue-500" 
+                                        value={bankForm.bankName} 
+                                        onChange={(e) => setBankForm({...bankForm, bankName: e.target.value})} 
+                                        required 
+                                    />
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Tên chủ tài khoản (In hoa không dấu)</label>
+                                <input type="text" placeholder="NGUYEN VAN A" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white" value={bankForm.accountName} onChange={handleNameChange} required />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">Số tài khoản</label>
+                                <input type="text" placeholder="Nhập số tài khoản hợp lệ..." className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white" value={bankForm.accountNumber} onChange={(e) => setBankForm({...bankForm, accountNumber: e.target.value.replace(/\D/g, '')})} required />
+                            </div>
+                            <button type="submit" className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all cursor-pointer">
+                                Xác nhận thông tin
+                            </button>
+                        </form>
+                    </div>
+                )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Số tài khoản</label>
-                <input
-                  type="text"
-                  placeholder="Nhập số tài khoản hợp lệ..."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-colors"
-                  value={bankForm.accountNumber}
-                  onChange={(e) => setBankForm({...bankForm, accountNumber: e.target.value.replace(/\D/g, '')})}
-                  required
-                />
-              </div>
+                {activeSettingTab === 'history' && (
+                    <div className="animate-fadeIn">
+                        <h4 className="text-lg font-bold text-slate-800 mb-4">Lịch sử rút tiền</h4>
+                        <div className="overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+                            {payoutHistory.length > 0 ? (
+                                <ul className="flex flex-col gap-3">
+                                    {payoutHistory.map((item, idx) => (
+                                        <li key={idx} className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+                                            <div>
+                                                <p className="font-bold text-slate-800">{Number(item.amount).toLocaleString()} đ</p>
+                                                <p className="text-xs text-slate-500 mt-1">{new Date(item.created_at).toLocaleString()}</p>
+                                            </div>
+                                            <div>
+                                                {item.status === 'completed' ? (
+                                                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Đã nhận</span>
+                                                ) : (
+                                                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Chờ duyệt</span>
+                                                )}
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-center py-8 text-slate-400">
+                                    <p className="text-4xl mb-2">💸</p>
+                                    <p className="text-sm font-bold">Chưa có giao dịch nào</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
-              <button
-                type="submit"
-                className="w-full mt-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all cursor-pointer"
-              >
-                Xác nhận thông tin
-              </button>
-              {bankInfo && (
-                 <button
-                   type="button"
-                   onClick={() => setShowBankModal(false)}
-                   className="w-full py-2 text-sm font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
-                 >
-                   Hủy bỏ
-                 </button>
-              )}
-            </form>
+            </div>
           </div>
         </div>
       )}

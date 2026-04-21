@@ -12,7 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        
+        // THÊM DÒNG NÀY: Tắt kiểm tra CSRF cho tất cả các API để React có thể gửi dữ liệu vào
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
+        
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

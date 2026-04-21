@@ -44,7 +44,6 @@ export default function Login() {
   });
 
   const handleLogin = async (e) => {
-    // ... (Giữ nguyên logic đăng nhập bằng form của bạn)
     e.preventDefault(); 
     setErrorMessage(''); 
     try {
@@ -57,13 +56,17 @@ export default function Login() {
         body: JSON.stringify({ email, password })
       });
       const data = await response.json();
-      if (!response.ok) {
+      
+      // SỬA ĐOẠN NÀY: Kiểm tra trực tiếp biến success từ Backend trả về
+      if (data.success === true) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        navigate('/student/home'); 
+      } else {
+        // NẾU SAI MẬT KHẨU: Đứng im và hiện lỗi
         setErrorMessage(data.message || 'Email hoặc mật khẩu không chính xác!');
-        return;
       }
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-      navigate('/student/home'); 
+
     } catch (error) {
       setErrorMessage('Không thể kết nối đến Server.');
     }

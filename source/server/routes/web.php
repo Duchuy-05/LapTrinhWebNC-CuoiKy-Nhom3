@@ -148,7 +148,16 @@ Route::withoutMiddleware([
     Route::post('/api/my-courses', [FrontendApiController::class, 'myCourses']);
     Route::get('/api/check-order/{id}', [FrontendApiController::class, 'checkOrder']);
     
+    // ==========================================
     // 3. API xử lý việc Giảng viên gửi yêu cầu rút tiền
     Route::post('/api/request-payout', [FrontendApiController::class, 'requestPayout']);
 
+    // API Lấy lịch sử rút tiền của Giảng viên
+    Route::get('/api/my-payouts', [FrontendApiController::class, 'myPayouts']);
+
+    // API Quản lý thông tin Ngân hàng của Giảng viên
+    Route::post('/api/update-bank-info', [FrontendApiController::class, 'updateBankInfo']);
+    Route::get('/api/get-bank-info', [FrontendApiController::class, 'getBankInfo']);
+    // API Hủy yêu cầu rút tiền
+    Route::post('/api/cancel-payout', [FrontendApiController::class, 'cancelPayout']);
 });

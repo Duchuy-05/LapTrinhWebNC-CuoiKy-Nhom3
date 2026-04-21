@@ -15,7 +15,15 @@ class FrontendApiController extends Controller
     {
         $user = User::where('email', $request->email)->first();
         if ($user && Hash::check($request->password, $user->password)) {
-            return response()->json(['success' => true, 'user' => $user])->header('Access-Control-Allow-Origin', '*');
+            
+            // SỬA Ở ĐÂY: Dùng lệnh chuẩn của Laravel để cấp Token thật
+            $token = $user->createToken('auth_token')->plainTextToken; 
+
+            return response()->json([
+                'success' => true, 
+                'user' => $user,
+                'token' => $token 
+            ])->header('Access-Control-Allow-Origin', '*');
         }
         return response()->json(['success' => false, 'message' => 'Email hoặc mật khẩu không đúng!'])->header('Access-Control-Allow-Origin', '*');
     }
@@ -32,7 +40,15 @@ class FrontendApiController extends Controller
         $user->password = Hash::make($request->password);
         $user->role = 'user';
         $user->save();
-        return response()->json(['success' => true, 'user' => $user])->header('Access-Control-Allow-Origin', '*');
+        
+        // SỬA Ở ĐÂY: Dùng lệnh chuẩn của Laravel để cấp Token thật cho user mới
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true, 
+            'user' => $user,
+            'token' => $token
+        ])->header('Access-Control-Allow-Origin', '*');
     }
 
     // 3. LẤY DANH SÁCH KHÓA HỌC ĐÃ MUA
@@ -116,11 +132,10 @@ class FrontendApiController extends Controller
         try {
             $bankInfo = $request->input('bankInfo');
             $amount = $request->input('amount');
-            
-            $teacher = User::first(); 
+            $userId = $request->input('user_id'); // LẤY CHUẨN ID CỦA NGƯỜI ĐANG ĐĂNG NHẬP
 
-            PayoutRequest::create([
-                'user_id' => $teacher->id ?? null,
+            \App\Models\PayoutRequest::create([
+                'user_id' => $userId,
                 'amount' => $amount,
                 'bank_name' => $bankInfo['bankName'],
                 'account_name' => $bankInfo['accountName'],
@@ -128,15 +143,98 @@ class FrontendApiController extends Controller
                 'status' => 'pending'
             ]);
 
-            return response()->json(['status' => 'success', 'message' => 'Đã gửi yêu cầu rút tiền thành công'])->header('Access-Control-Allow-Origin', '*');
+            return response()->json(['status' => 'success', 'message' => 'Đã gửi yêu cầu rút tiền thành công']);
             
-        } catch (\Throwable $e) { // 🛑 SỬA TẠI ĐÂY: Dùng \Throwable để tóm MỌI loại lỗi
-        
-            return response()->json([
-                'status' => 'error', 
-                'message' => 'LỖI THẬT SỰ LÀ: ' . $e->getMessage() . ' (Dòng ' . $e->getLine() . ')'
-            ])->header('Access-Control-Allow-Origin', '*');
+        } catch (\Throwable $e) { 
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    // ========================================================
+    // 8. API LẤY LỊCH SỬ RÚT TIỀN ĐỂ TRỪ SỐ DƯ (TỪ REACT)
+    // ========================================================
+    public function myPayouts(Request $request)
+    {
+        try {
+            // Thêm dòng này để kiểm tra xem có nhận được user_id từ React không
+            $userId = $request->input('user_id'); 
+            if (!$userId) {
+                return response()->json(['success' => false, 'message' => 'Thiếu ID người dùng']);
+            }
             
+            // Ép kiểu ID về String nếu cần (MongoDB đôi khi kén kiểu dữ liệu)
+            $payouts = \App\Models\PayoutRequest::where('user_id', (string)$userId)
+                                    ->orderBy('created_at', 'desc')
+                                    ->get();
+                                    
+            return response()->json(['success' => true, 'payouts' => $payouts]);
+        } catch (\Throwable $e) {
+            // Trả về lỗi cụ thể để mình biết MongoDB đang gặp vấn đề gì
+            return response()->json(['success' => false, 'message' => 'Lỗi DB: ' . $e->getMessage()]);
+        }
+    }
+    // ========================================================
+    // 9. API LƯU THÔNG TIN NGÂN HÀNG VÀO DATABASE MONGODB
+    // ========================================================
+    public function updateBankInfo(Request $request)
+    {
+        try {
+            $user = User::find($request->user_id);
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy tài khoản!']);
+            }
+
+            // MongoDB sẽ tự động tạo thêm 3 cột này vào bảng users
+            $user->bank_name = $request->bank_name;
+            $user->account_name = $request->account_name;
+            $user->account_number = $request->account_number;
+            $user->save();
+
+            return response()->json(['success' => true, 'message' => 'Đã lưu thông tin vào CSDL', 'user' => $user]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    // ========================================================
+    // 10. API LẤY THÔNG TIN NGÂN HÀNG TỪ DATABASE
+    // ========================================================
+    public function getBankInfo(Request $request)
+    {
+        try {
+            $user = User::find($request->user_id);
+            if ($user && $user->bank_name) {
+                return response()->json([
+                    'success' => true, 
+                    'bankInfo' => [
+                        'bankName' => $user->bank_name,
+                        'accountName' => $user->account_name,
+                        'accountNumber' => $user->account_number
+                    ]
+                ]);
+            }
+            return response()->json(['success' => false]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+    // ========================================================
+    // 11. API HỦY YÊU CẦU RÚT TIỀN (TỪ REACT)
+    // ========================================================
+    public function cancelPayout(Request $request)
+    {
+        try {
+            // Tìm yêu cầu đang 'pending' của user này và xóa nó
+            $payout = \App\Models\PayoutRequest::where('user_id', $request->user_id)
+                                              ->where('status', 'pending')
+                                              ->first();
+            if ($payout) {
+                $payout->delete();
+                return response()->json(['success' => true, 'message' => 'Đã hủy yêu cầu rút tiền']);
+            }
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy yêu cầu đang chờ']);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
     }
 }

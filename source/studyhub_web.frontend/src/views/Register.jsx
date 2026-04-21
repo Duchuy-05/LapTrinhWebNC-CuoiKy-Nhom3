@@ -30,13 +30,16 @@ export default function Register() {
           body: JSON.stringify({ token: tokenResponse.access_token })
         });
         const data = await response.json();
-        if (!response.ok) {
+        
+        // 🛑 SỬA: Thay !response.ok bằng kiểm tra data.success
+        if (data.success === true) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          navigate('/student/home');
+        } else {
           setErrorMessage(data.message || 'Lỗi xác thực Google từ Server!');
-          return;
         }
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user_data', JSON.stringify(data.user));
-        navigate('/student/home');
+
       } catch {
         setErrorMessage('Không thể kết nối đến Server.');
       }
@@ -71,19 +74,26 @@ export default function Register() {
       });
       const data = await response.json();
 
-      if (!response.ok) {
-        const errorMsg = data.errors
-          ? Object.values(data.errors)[0][0]
-          : (data.message || 'Đăng ký thất bại!');
-        setErrorMessage(errorMsg);
-        return;
+      // 🛑 SỬA: Logic kiểm tra kết quả trả về từ Backend
+      if (data.success === true) {
+         // Trường hợp 1: Đăng ký thành công luôn (Không dùng OTP)
+         localStorage.setItem('token', data.token);
+         localStorage.setItem('user_data', JSON.stringify(data.user));
+         navigate('/student/home');
+
+      } else if (data.status === 'needs_verification') {
+         // Trường hợp 2: Backend trả về needs_verification → chuyển sang màn OTP
+         setPendingEmail(data.email || email);
+         setNeedsVerification(true);
+
+      } else {
+         // Trường hợp 3: Có lỗi (trùng email, mật khẩu yếu, v.v...)
+         const errorMsg = data.errors
+           ? Object.values(data.errors)[0][0]
+           : (data.message || 'Đăng ký thất bại!');
+         setErrorMessage(errorMsg);
       }
 
-      // Backend trả về needs_verification → chuyển sang màn OTP
-      if (data.status === 'needs_verification') {
-        setPendingEmail(data.email);
-        setNeedsVerification(true);
-      }
     } catch {
       setErrorMessage('Không thể kết nối đến Server.');
     } finally {

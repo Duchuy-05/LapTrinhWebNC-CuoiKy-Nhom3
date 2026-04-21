@@ -28,7 +28,26 @@ class PayoutController extends Controller
 
     public function approve(Request $request, $id)
     {
-        // Tạm thời trả về thông báo, tính năng up ảnh sẽ hoàn thiện sau
-        return back()->with('success', 'Đã duyệt yêu cầu thành công!');
+        // 1. Tìm yêu cầu rút tiền trong Database
+        $payout = \App\Models\PayoutRequest::find($id);
+        
+        if (!$payout) {
+            return back()->with('error', 'Không tìm thấy yêu cầu rút tiền này!');
+        }
+
+        // 2. Xử lý Upload file ảnh biên lai
+        if ($request->hasFile('receipt_image')) {
+            // Tự động lưu ảnh vào thư mục storage/app/public/receipts
+            $imagePath = $request->file('receipt_image')->store('receipts', 'public');
+            $payout->receipt_image = $imagePath;
+        }
+
+        // 3. Cập nhật Trạng thái và Ghi chú
+        $payout->admin_note = $request->input('admin_note');
+        $payout->status = 'completed'; // Chuyển từ chờ duyệt -> Đã hoàn thành
+        $payout->save();
+
+        // 4. Trả về thông báo thành công
+        return back()->with('success', 'Đã duyệt tiền và lưu biên lai thành công!');
     }
 }

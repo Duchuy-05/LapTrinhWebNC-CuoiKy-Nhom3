@@ -8,7 +8,10 @@ export default function CommonHeader({ mode }) {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setUser(JSON.parse(storedUser));
+    // Kiểm tra kỹ: Dữ liệu phải tồn tại VÀ tuyệt đối không được là chữ "undefined"
+    if (storedUser && storedUser !== "undefined") {
+      setUser(JSON.parse(storedUser));
+    }
   }, []);
 
   const toggleMode = () => {
