@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Order; 
 use App\Models\PayoutRequest; // Khai báo thêm PayoutRequest
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class FrontendApiController extends Controller
 {
@@ -29,26 +30,121 @@ class FrontendApiController extends Controller
     }
 
     // 2. ĐĂNG KÝ
+    // 2. ĐĂNG KÝ VÀ GỬI OTP
     public function register(Request $request)
     {
         if(User::where('email', $request->email)->exists()) {
             return response()->json(['success' => false, 'message' => 'Email này đã được sử dụng!'])->header('Access-Control-Allow-Origin', '*');
         }
-        $user = new User();
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->password = Hash::make($request->password);
-        $user->role = 'user';
-        $user->save();
-        
-        // SỬA Ở ĐÂY: Dùng lệnh chuẩn của Laravel để cấp Token thật cho user mới
-        $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'success' => true, 
-            'user' => $user,
-            'token' => $token
-        ])->header('Access-Control-Allow-Origin', '*');
+        try {
+            $user = new User();
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->password = Hash::make($request->password);
+            $user->role = 'user';
+            
+            // 1. Tạo mã OTP ngẫu nhiên 6 số
+            $otp = rand(100000, 999999);
+            
+            // Lưu OTP vào MongoDB (MongoDB sẽ tự động thêm cột này)
+            $user->otp = $otp; 
+            $user->otp_expires_at = now()->addMinutes(10); // Cài đặt hết hạn sau 10 phút
+            $user->save();
+
+            // 2. Gửi email chứa mã OTP cho học viên
+            Mail::raw("Chào {$user->name},\n\nMã OTP xác thực tài khoản StudyHub của bạn là: {$otp}\nMã này sẽ hết hạn sau 10 phút.\n\nTrân trọng,\nĐội ngũ StudyHub", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Mã xác thực OTP - StudyHub');
+            });
+
+            // 3. Trả kết quả về cho React để mở form nhập mã
+            return response()->json([
+                'success' => true, 
+                'status' => 'needs_verification',
+                'email' => $user->email,
+                'message' => 'Đã gửi mã OTP. Vui lòng kiểm tra hộp thư!'
+            ])->header('Access-Control-Allow-Origin', '*');
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Không thể gửi email OTP. Vui lòng báo Admin kiểm tra cấu hình SMTP! Chi tiết: ' . $e->getMessage()
+            ])->header('Access-Control-Allow-Origin', '*');
+        }
+    }
+
+    // ========================================================
+    // 2.5 API XÁC THỰC MÃ OTP (ĐỒNG BỘ VỚI REACT)
+    // ========================================================
+    public function verifyOtp(Request $request)
+    {
+        try {
+            // Tìm user dựa vào email mà React gửi lên
+            $user = \App\Models\User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy yêu cầu xác thực. Vui lòng đăng ký lại.'], 400);
+            }
+
+            // So sánh OTP (Chú ý: React gửi lên bằng biến tên là 'code')
+            if ((string)$user->otp !== (string)$request->code) {
+                return response()->json(['success' => false, 'message' => 'Mã xác thực không chính xác!'], 400);
+            }
+
+            // Kiểm tra thời gian hết hạn (10 phút)
+            if (now()->greaterThan($user->otp_expires_at)) {
+                return response()->json(['success' => false, 'message' => 'Mã xác thực đã hết hạn! Vui lòng gửi lại mã.'], 400);
+            }
+
+            // NẾU THÀNH CÔNG: Xóa OTP cũ đi để bảo mật và cấp Token đăng nhập
+            $user->otp = null;
+            $user->otp_expires_at = null;
+            $user->save();
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'success' => true, 
+                'message' => 'Xác thực thành công!',
+                'user' => $user,
+                'token' => $token
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Lỗi Server: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ========================================================
+    // 2.6 API GỬI LẠI MÃ OTP (DÀNH CHO NÚT GỬI LẠI)
+    // ========================================================
+    public function resendOtp(Request $request)
+    {
+        try {
+            $user = \App\Models\User::where('email', $request->email)->first();
+            
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy tài khoản!'], 400);
+            }
+
+            // Tạo mã OTP mới và gia hạn 10 phút
+            $otp = rand(100000, 999999);
+            $user->otp = $otp;
+            $user->otp_expires_at = now()->addMinutes(10);
+            $user->save();
+
+            // Gửi email chứa mã mới
+            Mail::raw("Chào {$user->name},\n\nMã OTP MỚI để xác thực tài khoản StudyHub của bạn là: {$otp}\nMã này sẽ hết hạn sau 10 phút.\n\nTrân trọng,\nĐội ngũ StudyHub", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Mã xác thực OTP (Gửi lại) - StudyHub');
+            });
+
+            return response()->json(['success' => true, 'message' => 'Đã gửi lại mã OTP']);
+            
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Lỗi Server: ' . $e->getMessage()], 500);
+        }
     }
 
     // 3. LẤY DANH SÁCH KHÓA HỌC ĐÃ MUA

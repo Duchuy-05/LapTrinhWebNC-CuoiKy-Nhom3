@@ -143,6 +143,8 @@ Route::withoutMiddleware([
 
     Route::post('/api/login', [FrontendApiController::class, 'login']);
     Route::post('/api/register', [FrontendApiController::class, 'register']);
+    Route::post('/api/register/verify-email', [FrontendApiController::class, 'verifyOtp']);
+    Route::post('/api/register/resend-otp', [FrontendApiController::class, 'resendOtp']);
     Route::post('/api/create-order', [FrontendApiController::class, 'createOrder']);
     Route::post('/api/webhook', [FrontendApiController::class, 'bankingWebhook']);
     Route::post('/api/my-courses', [FrontendApiController::class, 'myCourses']);

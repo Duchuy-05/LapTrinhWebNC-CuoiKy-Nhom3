@@ -18,9 +18,7 @@ export default function Register() {
   const [pendingEmail, setPendingEmail] = useState('');
 
   const navigate = useNavigate();
-  const [successMessage, setSuccessMessage] = useState('');
 
-  // ⚠️ Hook phải khai báo trước mọi conditional return (Rules of Hooks)
   const registerWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -31,8 +29,8 @@ export default function Register() {
         });
         const data = await response.json();
         
-        // 🛑 SỬA: Thay !response.ok bằng kiểm tra data.success
         if (data.success === true) {
+          // Google đã xác thực email từ phía họ nên được phép đăng nhập thẳng
           localStorage.setItem('token', data.token);
           localStorage.setItem('user_data', JSON.stringify(data.user));
           navigate('/student/home');
@@ -74,20 +72,12 @@ export default function Register() {
       });
       const data = await response.json();
 
-      // 🛑 SỬA: Logic kiểm tra kết quả trả về từ Backend
-      if (data.success === true) {
-         // Trường hợp 1: Đăng ký thành công luôn (Không dùng OTP)
-         localStorage.setItem('token', data.token);
-         localStorage.setItem('user_data', JSON.stringify(data.user));
-         navigate('/student/home');
-
-      } else if (data.status === 'needs_verification') {
-         // Trường hợp 2: Backend trả về needs_verification → chuyển sang màn OTP
+      // ĐÃ SỬA: Loại bỏ hoàn toàn khả năng đăng nhập vượt rào
+      // Bất kể backend trả về success hay needs_verification, đều ép buộc qua màn hình OTP
+      if (data.success === true || data.status === 'needs_verification') {
          setPendingEmail(data.email || email);
          setNeedsVerification(true);
-
       } else {
-         // Trường hợp 3: Có lỗi (trùng email, mật khẩu yếu, v.v...)
          const errorMsg = data.errors
            ? Object.values(data.errors)[0][0]
            : (data.message || 'Đăng ký thất bại!');
