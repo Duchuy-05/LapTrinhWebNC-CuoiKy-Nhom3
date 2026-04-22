@@ -52,11 +52,18 @@ export default function Statistics() {
   const [payoutHistory, setPayoutHistory] = useState([]);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
 
+  // === STATE MỚI CHO MODAL DANH SÁCH HỌC VIÊN ===
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [studentsList, setStudentsList] = useState([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+
   useEffect(() => {
     fetchStatistics();
     if (currentUserId) {
         fetchPayoutHistory();
         checkBankInformation();
+        fetchMyStudents(); // Lấy sẵn danh sách học viên ngầm
     }
   }, [currentUserId]);
 
@@ -91,6 +98,23 @@ export default function Statistics() {
     }
   };
 
+  const fetchMyStudents = async () => {
+    try {
+      setIsLoadingStudents(true);
+      const response = await fetch(`http://127.0.0.1:8000/api/lecturer/my-students?user_id=${currentUserId}`);
+      const data = await response.json();
+      if (data.success) {
+        setStudentsList(data.data);
+        // Ép con số Tổng Học Viên bên ngoài khớp 100% với danh sách thực tế của Giảng viên này
+        setSummary(prev => ({ ...prev, total_students: data.data.length })); 
+      }
+    } catch (error) {
+      console.error("Lỗi tải danh sách học viên", error);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
   const fetchPayoutHistory = async () => {
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/my-payouts?user_id=${currentUserId}`);
@@ -98,23 +122,16 @@ export default function Statistics() {
         
         if (data.success) {
             setPayoutHistory(data.payouts);
-            
             let withdrawn = 0;
             let hasPending = false;
             
             data.payouts.forEach(p => {
-                // CHỈ CỘNG TIỀN VÀO TỔNG ĐÃ RÚT NẾU ADMIN ĐÃ DUYỆT (completed)
-                if (p.status === 'completed') {
-                    withdrawn += parseFloat(p.amount);
-                }
-                // KIỂM TRA XEM CÓ YÊU CẦU NÀO ĐANG CHỜ KHÔNG
-                if (p.status === 'pending') {
-                    hasPending = true;
-                }
+                if (p.status === 'completed') withdrawn += parseFloat(p.amount);
+                if (p.status === 'pending') hasPending = true;
             });
 
             setTotalWithdrawn(withdrawn);
-            setWithdrawalStatus(hasPending ? 'pending' : 'idle'); // Đồng bộ nút bấm theo Database
+            setWithdrawalStatus(hasPending ? 'pending' : 'idle'); 
         }
     } catch (error) {
         console.error("Chưa kết nối được API Lịch sử rút tiền");
@@ -125,15 +142,11 @@ export default function Statistics() {
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/get-bank-info?user_id=${currentUserId}`);
         const data = await response.json();
-        
         if (data.success && data.bankInfo) {
             setBankInfo(data.bankInfo);
             setBankForm(data.bankInfo);
-            if (!predefinedBanks.includes(data.bankInfo.bankName)) {
-                setIsCustomBank(true);
-            } else {
-                setIsCustomBank(false);
-            }
+            if (!predefinedBanks.includes(data.bankInfo.bankName)) setIsCustomBank(true);
+            else setIsCustomBank(false);
         } else {
             setBankInfo(null);
             setBankForm({ bankName: 'Vietcombank', accountName: '', accountNumber: '' });
@@ -155,7 +168,6 @@ export default function Statistics() {
         Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng điền đầy đủ Tên chủ tài khoản và Số tài khoản!'});
         return;
     }
-    
     try {
         const response = await fetch('http://127.0.0.1:8000/api/update-bank-info', {
             method: 'POST',
@@ -168,7 +180,6 @@ export default function Statistics() {
             })
         });
         const data = await response.json();
-
         if (data.success) {
             setBankInfo(bankForm);
             Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã lưu thông tin ngân hàng vào CSDL an toàn!', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000});
@@ -180,7 +191,6 @@ export default function Statistics() {
     }
   };
 
-  // SỐ DƯ = (TỔNG DOANH THU * 60%) - TỔNG TIỀN ĐÃ NHẬN
   const totalEarned = summary.total_revenue * 0.6;
   const walletBalance = Math.max(0, totalEarned - totalWithdrawn); 
 
@@ -214,21 +224,19 @@ export default function Statistics() {
                     body: JSON.stringify({ amount: walletBalance, bankInfo: bankInfo, user_id: currentUserId })
                 });
                 const data = await response.json();
-
                 if (data.status === 'success') {
                     Swal.fire('Đã gửi!', 'Yêu cầu rút tiền đang chờ Admin xử lý.', 'success');
-                    fetchPayoutHistory(); // Load lại dữ liệu lập tức
+                    fetchPayoutHistory(); 
                 } else {
                     Swal.fire('Lỗi', data.message, 'error');
                 }
             } catch (error) {
-                Swal.fire('Lỗi mạng', 'Không thể kết nối đến máy chủ', 'error');
+                Swal.fire('Lỗi mạng', 'Không thể kết nối', 'error');
             }
         }
     });
   };
 
-  // HÀM XỬ LÝ KHI BẤM NÚT HỦY YÊU CẦU
   const handleCancelRequest = () => {
       Swal.fire({
           title: 'Hủy yêu cầu?',
@@ -250,7 +258,7 @@ export default function Statistics() {
                   const data = await response.json();
                   if (data.success) {
                       Swal.fire('Đã hủy!', 'Yêu cầu rút tiền của bạn đã bị hủy.', 'success');
-                      fetchPayoutHistory(); // Load lại dữ liệu để mở lại nút rút tiền
+                      fetchPayoutHistory();
                   } else {
                       Swal.fire('Lỗi', data.message, 'error');
                   }
@@ -280,11 +288,18 @@ export default function Statistics() {
 
         <div className="flex flex-wrap gap-4">
 
-          <div className="bg-white border border-slate-100 px-6 py-4 rounded-2xl shadow-sm flex items-center gap-4 flex-1 min-w-[200px]">
-             <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-xl">👨‍🎓</div>
+          {/* SỬA ĐỔI: Biến thẻ Tổng Học Viên thành Nút bấm hiển thị Modal */}
+          <div 
+             onClick={() => setShowStudentsModal(true)}
+             className="bg-white border border-slate-100 px-6 py-4 rounded-2xl shadow-sm flex items-center gap-4 flex-1 min-w-[200px] cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-indigo-500 group"
+          >
+             <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👨‍🎓</div>
              <div>
                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tổng học viên</p>
                <p className="text-2xl font-black text-slate-800">{summary.total_students.toLocaleString()}</p>
+               <p className="text-[10px] text-indigo-500 mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                  Bấm xem danh sách <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+               </p>
              </div>
           </div>
 
@@ -304,7 +319,6 @@ export default function Statistics() {
                     </p>
                     <p className="text-xl font-black text-slate-800">{walletBalance.toLocaleString()} đ</p>
                  </div>
-                 {/* BÁNH RĂNG CÀI ĐẶT */}
                  <button onClick={() => setShowSettingsModal(true)} title="Cài đặt thanh toán" className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50 cursor-pointer">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -318,7 +332,6 @@ export default function Statistics() {
                      <button disabled className="w-full py-1.5 bg-slate-100 text-slate-500 text-xs font-bold rounded-lg border border-slate-200 cursor-not-allowed">
                          ⏳ Đang chờ Admin duyệt...
                      </button>
-                     {/* NÚT HỦY YÊU CẦU MỚI THÊM VÀO */}
                      <button onClick={handleCancelRequest} className="w-full py-1.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors text-xs font-bold rounded-lg border border-red-100 cursor-pointer">
                          ❌ Hủy yêu cầu rút
                      </button>
@@ -542,6 +555,99 @@ export default function Statistics() {
                 )}
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MỚI: DANH SÁCH HỌC VIÊN */}
+      {showStudentsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-100 overflow-hidden flex flex-col max-h-[85vh]">
+            
+            {/* Header Modal */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xl">👨‍🎓</div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800">Danh sách học viên</h3>
+                  <p className="text-xs text-slate-500 font-bold mt-1">Tổng cộng: {studentsList.length} người đang học khóa của bạn</p>
+                </div>
+              </div>
+              <button onClick={() => setShowStudentsModal(false)} className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            {/* Body Modal (Bảng danh sách) */}
+            <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+              
+              <div className="relative">
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm theo tên học viên, email hoặc tên khóa học..." 
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors"
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                />
+                <span className="absolute left-3 top-3.5 text-slate-400">🔍</span>
+              </div>
+
+              <div className="overflow-y-auto flex-1 custom-scrollbar border border-slate-100 rounded-xl bg-white">
+                {isLoadingStudents ? (
+                  <div className="flex justify-center items-center py-20">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-slate-100 z-10 shadow-sm">
+                      <tr className="text-xs uppercase tracking-wider text-slate-500 font-bold">
+                        <th className="p-4 pl-6">Học viên</th>
+                        <th className="p-4">Khóa học đăng ký</th>
+                        <th className="p-4 pr-6">Ngày tham gia</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {studentsList.filter(s => 
+                        s.student_name.toLowerCase().includes(studentSearchTerm.toLowerCase()) || 
+                        s.student_email.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                        s.course_name.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                      ).length > 0 ? (
+                        studentsList.filter(s => 
+                          s.student_name.toLowerCase().includes(studentSearchTerm.toLowerCase()) || 
+                          s.student_email.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                          s.course_name.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                        ).map((student, idx) => (
+                          <tr key={idx} className="hover:bg-indigo-50/50 transition-colors">
+                            <td className="p-4 pl-6">
+                                <p className="font-bold text-slate-800">{student.student_name}</p>
+                                <p className="text-xs text-slate-500 mt-1">{student.student_email}</p>
+                            </td>
+                            <td className="p-4">
+                                <span className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold rounded-lg block w-max max-w-[250px] truncate" title={student.course_name}>
+                                    {student.course_name}
+                                </span>
+                            </td>
+                            <td className="p-4 pr-6 text-sm text-slate-500 font-medium">
+                                {new Date(student.enrolled_at).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="3" className="text-center py-20">
+                            <p className="text-4xl mb-3">📭</p>
+                            <p className="text-slate-500 font-bold">
+                                {studentSearchTerm ? 'Không tìm thấy dữ liệu phù hợp với từ khóa.' : 'Chưa có học viên nào.'}
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
       )}

@@ -42,7 +42,6 @@ function App() {
           <Route path="courses" element={<Courses />} /> 
           <Route path="courses/:courseId/edit" element={<CourseEditor />} />
           <Route path="published-courses" element={<PublishedCourses />} />
-          <Route path="students" element={<div className="p-8">Quản lý học viên của tôi</div>} />
           <Route path="statistics" element={<Statistics />} />
           <Route path="/lecturer/courses/:courseId/edit" element={<CourseEditor />} />
           <Route path="/lecturer/published-courses/:courseId/view" element={<PublishedCourseViewer />} />

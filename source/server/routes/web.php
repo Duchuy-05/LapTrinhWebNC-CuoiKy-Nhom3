@@ -160,4 +160,7 @@ Route::withoutMiddleware([
     Route::get('/api/get-bank-info', [FrontendApiController::class, 'getBankInfo']);
     // API Hủy yêu cầu rút tiền
     Route::post('/api/cancel-payout', [FrontendApiController::class, 'cancelPayout']);
+    // API Lấy danh sách Học viên của Giảng viên
+    Route::get('/api/lecturer/my-students', [FrontendApiController::class, 'getMyStudents']);
+    
 });
