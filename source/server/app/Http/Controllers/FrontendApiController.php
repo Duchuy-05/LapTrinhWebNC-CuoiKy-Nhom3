@@ -239,48 +239,96 @@ class FrontendApiController extends Controller
     }
 
     // ========================================================
-    // 12. API LẤY DANH SÁCH HỌC VIÊN (LOGIC CHUẨN NHƯ TRANG ADMIN)
+    // 12. API LẤY DANH SÁCH HỌC VIÊN (KHỚP TẤT CẢ ĐỊNH DẠNG ID VÀ UUID)
     // ========================================================
     public function getMyStudents(Request $request)
     {
         try {
             $lecturerId = (string) $request->input('user_id');
 
-            // 1. Lấy toàn bộ đơn hàng (Giống hệt cách trang Admin quản lý)
-            $allOrders = \App\Models\Order::orderBy('created_at', 'desc')->get();
-            $studentsList = [];
+            // 1. TÌM KHÓA HỌC CỦA ĐÚNG GIẢNG VIÊN NÀY
+            $allCourses = \App\Models\Course::all();
+            $myCourses = [];
+            $myCourseIds = []; // Mảng chứa toàn bộ các loại ID của khóa học này
 
-            foreach ($allOrders as $order) {
-                // Lọc đơn đã thanh toán (Hỗ trợ cả chữ "Thành công" như trên ảnh Admin của bạn)
-                $status = mb_strtolower($order->status, 'UTF-8');
-                if (!in_array($status, ['completed', 'success', 'thành công', 'thanh cong'])) {
-                    continue; 
-                }
-
-                // 2. Tìm khóa học bằng hàm cơ bản của Laravel
-                $course = \App\Models\Course::find($order->course_id);
-                if (!$course) continue;
-
-                // 3. TÁCH BIỆT: Chỉ lọc ra những hóa đơn mua khóa học do chính giảng viên này tạo
-                $authorId = (string)($course->user_id ?? $course->instructor_id ?? '');
+            foreach ($allCourses as $c) {
+                $author = (string)($c->authorId ?? $c->author_id ?? $c->user_id ?? '');
                 
-                if ($authorId === $lecturerId) {
+                if ($author === $lecturerId) {
+                    $myCourses[] = $c;
                     
-                    // Lấy thông tin người mua
-                    $student = \App\Models\User::find($order->user_id);
-
-                    $studentsList[] = [
-                        'order_id' => (string)($order->_id ?? $order->id),
-                        'student_name' => $student ? $student->name : 'Học viên',
-                        'student_email' => $student ? $student->email : '',
-                        'course_name' => $course->title ?? $course->name ?? 'Khóa học',
-                        'amount' => $order->amount ?? 0,
-                        'enrolled_at' => $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : date('Y-m-d H:i:s')
-                    ];
+                    // Lấy tất cả các định dạng ID có thể được lưu trong bảng Order
+                    if (!empty($c->_id)) $myCourseIds[] = (string)$c->_id;
+                    if (!empty($c->id)) $myCourseIds[] = (string)$c->id;
+                    if (!empty($c->courseGroupId)) $myCourseIds[] = (string)$c->courseGroupId; // Chìa khóa từ ảnh MongoDB của bạn
                 }
             }
 
-            return response()->json(['success' => true, 'data' => array_values($studentsList)]);
+            // 2. LẤY ĐƠN HÀNG THUỘC VỀ CÁC KHÓA HỌC TRÊN
+            $allOrders = \App\Models\Order::all();
+            $validOrders = [];
+            
+            foreach ($allOrders as $o) {
+                $status = mb_strtolower($o->status ?? '', 'UTF-8');
+                if (in_array($status, ['completed', 'success', 'thành công', 'thanh cong'])) {
+                    
+                    $orderCourseId = (string)($o->course_id ?? $o->courseId ?? '');
+                    
+                    // Kiểm tra xem ID trong hóa đơn có khớp với bất kỳ ID/UUID nào của Giảng viên không
+                    if (in_array($orderCourseId, $myCourseIds)) {
+                        $validOrders[] = $o;
+                    }
+                }
+            }
+
+            // 3. TÌM THÔNG TIN HỌC VIÊN
+            $allUsers = \App\Models\User::all();
+            $studentsList = [];
+
+            foreach ($validOrders as $o) {
+                $orderCourseId = (string)($o->course_id ?? $o->courseId ?? '');
+                $uId = (string)($o->user_id ?? $o->userId ?? '');
+
+                // Lấy tên khóa học tương ứng
+                $courseName = 'Khóa học';
+                foreach ($myCourses as $c) {
+                    if (
+                        (string)($c->_id ?? '') === $orderCourseId || 
+                        (string)($c->id ?? '') === $orderCourseId || 
+                        (string)($c->courseGroupId ?? '') === $orderCourseId
+                    ) {
+                        $courseName = $c->title ?? $c->name ?? 'Khóa học';
+                        break;
+                    }
+                }
+
+                // Lấy tên và email học viên
+                $studentName = 'Học viên';
+                $studentEmail = '';
+                foreach ($allUsers as $u) {
+                    if ((string)($u->_id ?? $u->id) === $uId) {
+                        $studentName = $u->name ?? 'Học viên';
+                        $studentEmail = $u->email ?? '';
+                        break;
+                    }
+                }
+
+                $studentsList[] = [
+                    'order_id' => (string)($o->_id ?? $o->id),
+                    'student_name' => $studentName,
+                    'student_email' => $studentEmail,
+                    'course_name' => $courseName,
+                    'amount' => $o->amount ?? 0,
+                    'enrolled_at' => $o->created_at ? \Carbon\Carbon::parse($o->created_at)->format('Y-m-d H:i:s') : date('Y-m-d H:i:s')
+                ];
+            }
+
+            // Sắp xếp ngày đăng ký mới nhất lên đầu
+            usort($studentsList, function($a, $b) {
+                return strtotime($b['enrolled_at']) - strtotime($a['enrolled_at']);
+            });
+
+            return response()->json(['success' => true, 'data' => $studentsList]);
 
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()]);

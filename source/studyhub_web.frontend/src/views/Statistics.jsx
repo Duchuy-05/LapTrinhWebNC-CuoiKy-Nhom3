@@ -57,6 +57,8 @@ export default function Statistics() {
   const [studentsList, setStudentsList] = useState([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  // THÊM BIẾN NÀY ĐỂ HIỂN THỊ SỐ LƯỢNG CHUẨN XÁC:
+  const [realTotalStudents, setRealTotalStudents] = useState(0);
 
   useEffect(() => {
     fetchStatistics();
@@ -105,11 +107,10 @@ export default function Statistics() {
       const data = await response.json();
       if (data.success) {
         setStudentsList(data.data);
-        // Ép con số Tổng Học Viên bên ngoài khớp 100% với danh sách thực tế của Giảng viên này
-        setSummary(prev => ({ ...prev, total_students: data.data.length })); 
+        setRealTotalStudents(data.data.length); // CẬP NHẬT SỐ LƯỢNG TỪ DANH SÁCH THỰC TẾ
       }
     } catch (error) {
-      console.error("Lỗi tải danh sách học viên", error);
+      console.error("Lỗi tải danh sách", error);
     } finally {
       setIsLoadingStudents(false);
     }
@@ -296,7 +297,7 @@ export default function Statistics() {
              <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👨‍🎓</div>
              <div>
                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tổng học viên</p>
-               <p className="text-2xl font-black text-slate-800">{summary.total_students.toLocaleString()}</p>
+               <p className="text-2xl font-black text-slate-800">{realTotalStudents.toLocaleString()}</p>
                <p className="text-[10px] text-indigo-500 mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity font-bold">
                   Bấm xem danh sách <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
                </p>
