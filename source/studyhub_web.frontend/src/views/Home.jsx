@@ -8,7 +8,7 @@ import PaginatedSection from '../components/PaginatedSection'; // THÊM IMPORT N
 export default function StudentDashboard() {
   const banners = [
     { id: 1, image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1000&auto=format&fit=crop', title: 'Học Lập Trình Từ Con Số 0', subtitle: 'Giảm giá 50% cho người mới bắt đầu' },
-    { id: 2, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1000&auto=format&fit=crop', title: 'Thành Thạo ReactJS 2024', subtitle: 'Khóa học thực chiến với dự án thực tế' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1000&auto=format&fit=crop', title: 'Thành Thạo ReactJS 2026', subtitle: 'Khóa học thực chiến với dự án thực tế' },
   ];
 
   const navigate = useNavigate();

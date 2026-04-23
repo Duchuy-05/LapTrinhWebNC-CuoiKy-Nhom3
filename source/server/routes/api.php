@@ -62,6 +62,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/upload-image', ImageUploadController::class); 
         Route::put('/{courseGroupId}/price', [CourseController::class, 'updatePrice']); 
 
+        Route::post('/lecturer/upload-image', [CourseController::class, 'uploadImage']);
+
         
         Route::get('/{courseGroupId}/published', [CourseController::class, 'showPublishedForLecturer']); 
     });
