@@ -1,9 +1,6 @@
 # Software Requirement Specification (SRS)
 ## Chức năng: Thanh toán & Quản lý Đơn hàng (Payment & Order Management)
-**Mã chức năng:** STUDENT-01 / ADMIN-03  
-**Trạng thái:** Final  
 **Người soạn thảo:** Nguyễn Tiến Đức Huy  
-**Vai trò:** Backend / Payment Integration Developer
 
 ---
 

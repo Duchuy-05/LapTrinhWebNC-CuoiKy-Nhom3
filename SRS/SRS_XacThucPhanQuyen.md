@@ -1,9 +1,6 @@
 # Software Requirement Specification (SRS)
 ## Chức năng: Xác thực & Phân quyền (Authentication & Authorization)
-**Mã chức năng:** AUTH-01  
-**Trạng thái:** Final  
 **Người soạn thảo:** Nguyễn Tiến Đức Huy  
-**Vai trò:** Backend Developer
 
 ---
 
