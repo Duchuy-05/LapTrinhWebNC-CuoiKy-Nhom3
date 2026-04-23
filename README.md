@@ -28,6 +28,9 @@ Dự án tập trung xây dựng một hệ sinh thái học tập trực tuyế
 * **Công cụ:** Postman để test function
 
 ## SRS
-* [SRS Chức năng quản lý khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
-* [Quản lý Khóa học (ADMIN-Kiên)](./SRS_QuanLyKhoaHoc.md)
-* [Quản lý Người dùng (ADMIN-Đại)](./SRS_QuanLyNguoiDung.md)
+* [SRS Chức năng Bình luận, Đánh giá & Thống kê](./SRS/SRS_BinhLuanThongKe.md)
+* [SRS Chức năng Học bài & Theo dõi Tiến độ](./SRS/SRS_HocBaiTienDo.md)
+* [SRS Chức năng Quản lý Khóa học](./SRS/SRS_QuanLyKhoaHoc.md)
+* [SRS Chức năng Quản lý Người dùng](./SRS/SRS_QuanLyNguoiDung.md)
+* [SRS Chức năng Thanh toán & Quản lý Đơn hàng](./SRS/SRS_ThanhToanDonHang.md)
+* [SRS Chức năng Xác thực & Phân quyền](./SRS/SRS_XacThucPhanQuyen.md)
