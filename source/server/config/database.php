@@ -54,6 +54,12 @@ return [
             'options'  => [
                 // Ở đây bạn có thể thêm các option của MongoDB nếu cần, hiện tại để trống cũng được
             ],
+        // sử dung mongo atlas
+        'mongodb' => [
+            'driver'   => 'mongodb',
+            'dsn'      => env('DB_URI'),
+            'database' => env('DB_DATABASE', 'studyhub_db'),
+            ],
         ],
 
         'mysql' => [
