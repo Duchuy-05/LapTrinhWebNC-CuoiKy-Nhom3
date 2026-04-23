@@ -18,9 +18,7 @@ export default function Register() {
   const [pendingEmail, setPendingEmail] = useState('');
 
   const navigate = useNavigate();
-  const [successMessage, setSuccessMessage] = useState('');
 
-  // ⚠️ Hook phải khai báo trước mọi conditional return (Rules of Hooks)
   const registerWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -30,13 +28,16 @@ export default function Register() {
           body: JSON.stringify({ token: tokenResponse.access_token })
         });
         const data = await response.json();
-        if (!response.ok) {
+        
+        if (data.success === true) {
+          // Google đã xác thực email từ phía họ nên được phép đăng nhập thẳng
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          navigate('/student/home');
+        } else {
           setErrorMessage(data.message || 'Lỗi xác thực Google từ Server!');
-          return;
         }
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user_data', JSON.stringify(data.user));
-        navigate('/student/home');
+
       } catch {
         setErrorMessage('Không thể kết nối đến Server.');
       }
@@ -71,19 +72,18 @@ export default function Register() {
       });
       const data = await response.json();
 
-      if (!response.ok) {
-        const errorMsg = data.errors
-          ? Object.values(data.errors)[0][0]
-          : (data.message || 'Đăng ký thất bại!');
-        setErrorMessage(errorMsg);
-        return;
+      // ĐÃ SỬA: Loại bỏ hoàn toàn khả năng đăng nhập vượt rào
+      // Bất kể backend trả về success hay needs_verification, đều ép buộc qua màn hình OTP
+      if (data.success === true || data.status === 'needs_verification') {
+         setPendingEmail(data.email || email);
+         setNeedsVerification(true);
+      } else {
+         const errorMsg = data.errors
+           ? Object.values(data.errors)[0][0]
+           : (data.message || 'Đăng ký thất bại!');
+         setErrorMessage(errorMsg);
       }
 
-      // Backend trả về needs_verification → chuyển sang màn OTP
-      if (data.status === 'needs_verification') {
-        setPendingEmail(data.email);
-        setNeedsVerification(true);
-      }
     } catch {
       setErrorMessage('Không thể kết nối đến Server.');
     } finally {

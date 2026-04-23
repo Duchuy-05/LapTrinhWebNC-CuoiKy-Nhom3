@@ -8,20 +8,9 @@
         @csrf
         <div class="card-body">
             
-            <div class="row">
-                <div class="col-md-6 form-group">
-                    <label>Tên khóa học</label>
-                    <input type="text" name="title" class="form-control" placeholder="VD: Lập trình PHP từ số 0" required>
-                </div>
-                <div class="col-md-6 form-group">
-                    <label>Danh mục</label>
-                    <select name="category_id" class="form-control" required>
-                        <option value="">-- Chọn danh mục --</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            <div class="form-group">
+                <label>Tên khóa học</label>
+                <input type="text" name="title" class="form-control" placeholder="VD: Lập trình PHP từ số 0" required>
             </div>
 
             <div class="row">

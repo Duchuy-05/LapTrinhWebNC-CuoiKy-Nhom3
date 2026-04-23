@@ -9,7 +9,6 @@ export default function MainLayout({ mode }) {
     { to: '/lecturer/courses', icon: '📘', label: 'Khóa học' },
     { to: '/lecturer/published-courses', icon: '📚', label: 'Khóa học đã xuất bản' },
     { to: '/lecturer/statistics', icon: '📊', label: 'Thống kê' },
-    { to: '/lecturer/students', icon: '👥', label: 'Học viên' },
   ];
 
   return (

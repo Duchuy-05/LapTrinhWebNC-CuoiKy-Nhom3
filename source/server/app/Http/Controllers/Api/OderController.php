@@ -100,6 +100,7 @@ class OderController extends Controller
     {
         $userId        = auth()->id();
         $paymentMethod = $request->input('paymentMethod');
+        $source        = $request->input('source', 'web');
 
         $course = Course::where('courseGroupId', $courseGroupId)->where('status', 'PUBLISHED')->first();
         if (!$course) {
@@ -133,10 +134,9 @@ class OderController extends Controller
         if ($existingPending && $existingPending->transaction_id) {
             // Đã có đơn PENDING với transaction_id → thử tạo lại link PayOS từ đơn cũ
             try {
-                $payUrl = $payOsService->createPaymentLinkFromExisting($existingPending);
+                $payUrl = $payOsService->createPaymentLinkFromExisting($existingPending, $source); // ← thêm $source
                 return response()->json(['payUrl' => $payUrl]);
             } catch (\Exception $e) {
-                // Nếu link cũ hết hạn hoặc lỗi → hủy đơn cũ, tạo đơn mới bên dưới
                 $existingPending->update(['status' => 'CANCELED']);
             }
         }
@@ -152,7 +152,7 @@ class OderController extends Controller
 
         if ($paymentMethod === 'payos') {
             try {
-                $payUrl = $payOsService->createPaymentLink($order);
+                $payUrl = $payOsService->createPaymentLink($order, $source); // ← thêm $source
                 return response()->json(['payUrl' => $payUrl]);
             } catch (\Exception $e) {
                 $order->delete();

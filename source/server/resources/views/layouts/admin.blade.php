@@ -49,15 +49,6 @@
                         </a>
                     </li>
                     
-                    {{-- 
-                    <li class="nav-item">
-                        <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-tags"></i> 
-                            <p>Quản lý Danh mục</p>
-                        </a>
-                    </li> 
-                    --}}
-                    
                     <li class="nav-item">
                         <a href="{{ route('admin.courses.index') }}" class="nav-link {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-book"></i>
@@ -69,6 +60,22 @@
                         <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-shopping-cart"></i>
                             <p>Quản lý Đơn hàng</p>
+                        </a>
+                    </li>
+
+                    @php
+                        // Logic đếm yêu cầu chưa duyệt để hiện chấm đỏ
+                        $pendingPayoutsCount = \App\Models\PayoutRequest::where('status', 'pending')->count();
+                    @endphp
+                    <li class="nav-item">
+                        <a href="{{ route('admin.payouts.index') }}" class="nav-link {{ request()->routeIs('admin.payouts.*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-money-check-alt"></i>
+                            <p>
+                                Thanh toán Giảng viên
+                                @if($pendingPayoutsCount > 0)
+                                    <span class="badge badge-danger right" style="min-width: 10px; height: 10px; border-radius: 50%; padding: 0; margin-top: 5px;" title="Có {{ $pendingPayoutsCount }} yêu cầu mới">&nbsp;</span>
+                                @endif
+                            </p>
                         </a>
                     </li>
 

@@ -8,7 +8,6 @@ const Dashboard = () => {
     { id: 2, title: 'Khóa học', icon: '📘', path: '/lecturer/courses' },
     { id: 3, title: 'Khóa học đã xuất bản', icon: '📚', path: '/lecturer/published-courses' },
     { id: 4, title: 'Thống kê', icon: '📊', path: '/lecturer/statistics' },
-    { id: 5, title: 'Học viên', icon: '👥', path: '/lecturer/students' },
   ];
 
   return (
