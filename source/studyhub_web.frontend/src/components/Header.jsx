@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StudyHubLogo from '../assets/images/logo_Studyhub.jpg';
+import StudyHubLogo from '../assets/images/logo_StudyHub.jpg';
 
 export default function CommonHeader({ mode }) {
   const [user, setUser] = useState(null);
