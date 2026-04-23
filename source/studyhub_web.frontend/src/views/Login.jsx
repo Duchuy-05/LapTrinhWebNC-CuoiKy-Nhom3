@@ -44,7 +44,6 @@ export default function Login() {
   });
 
   const handleLogin = async (e) => {
-    // ... (Giữ nguyên logic đăng nhập bằng form của bạn)
     e.preventDefault(); 
     setErrorMessage(''); 
     try {
