@@ -49,26 +49,33 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    Route::get('/lecturer/statistics', [StatisticsController::class, 'getStatistics']);
 
-    Route::prefix('lecturer/courses')->group(function () {
-        Route::get('/', [CourseController::class, 'index']); 
-        Route::post('/', [CourseController::class, 'store']); 
-        Route::get('/{courseGroupId}/draft', [CourseController::class, 'showDraft']); 
-        Route::put('/{courseGroupId}/draft', [CourseController::class, 'updateDraft']); 
-        Route::post('/{courseGroupId}/publish', [CourseController::class, 'publish']); 
-        Route::post('/{courseGroupId}/unpublish', [CourseController::class, 'unpublish']); 
-        Route::post('/upload-video', VideoUploadController::class); 
-        Route::post('/upload-image', ImageUploadController::class); 
-        Route::put('/{courseGroupId}/price', [CourseController::class, 'updatePrice']); 
+    // ==========================================
+    // VÙNG API GIẢNG VIÊN (Bắt buộc role: lecturer hoặc admin)
+    // ==========================================
+    Route::middleware('role:lecturer,admin')->group(function () {
 
-        Route::post('/lecturer/upload-image', [CourseController::class, 'uploadImage']);
+        Route::get('/lecturer/statistics', [StatisticsController::class, 'getStatistics']);
 
-        
-        Route::get('/{courseGroupId}/published', [CourseController::class, 'showPublishedForLecturer']); 
-    });
+        Route::prefix('lecturer/courses')->group(function () {
+            Route::get('/', [CourseController::class, 'index']); 
+            Route::post('/', [CourseController::class, 'store']); 
+            Route::get('/{courseGroupId}/draft', [CourseController::class, 'showDraft']); 
+            Route::put('/{courseGroupId}/draft', [CourseController::class, 'updateDraft']); 
+            Route::post('/{courseGroupId}/publish', [CourseController::class, 'publish']); 
+            Route::post('/{courseGroupId}/unpublish', [CourseController::class, 'unpublish']); 
+            Route::post('/upload-video', VideoUploadController::class); 
+            Route::post('/upload-image', ImageUploadController::class); 
+            Route::put('/{courseGroupId}/price', [CourseController::class, 'updatePrice']); 
+            Route::post('/lecturer/upload-image', [CourseController::class, 'uploadImage']);
+            Route::get('/{courseGroupId}/published', [CourseController::class, 'showPublishedForLecturer']); 
+        });
 
-    // Group API dành cho Học viên (Student)
+    }); // end role:lecturer,admin
+
+    // ==========================================
+    // VÙNG API HỌC VIÊN (Bắt buộc đăng nhập, mọi role đều dùng được)
+    // ==========================================
     Route::prefix('student')->group(function () {
         Route::get('/my-courses', [OderController::class, 'myCourses']);
         Route::get('/courses/{courseGroupId}/order-status', [OderController::class, 'getOrderStatus']);

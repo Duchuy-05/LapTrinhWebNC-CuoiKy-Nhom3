@@ -52,7 +52,7 @@ class AuthController extends Controller
             'email'      => $fields['email'],
             'code'       => bcrypt($otp),
             'name'       => $fields['name'],
-            'password'   => $fields['password'], // Lưu plain text, User model tự hash qua cast 'hashed'
+            'password'   => bcrypt($fields['password']), // Hash trước khi lưu — User::create() sẽ nhận hash này
             'expires_at' => now()->addMinutes(10),
             'verified'   => false,
         ]);
@@ -113,13 +113,17 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Tạo user
-        $user = User::create([
-            'name'     => $verification->name,
-            'email'    => $verification->email,
-            'password' => $verification->password,
-            'role'     => 'user',
-        ]);
+        // Tạo user — password đã được hash sẵn trong EmailVerification,
+        // dùng forceCreate (hoặc tắt cast tạm) để tránh bcrypt lần 2
+        $user = new User();
+        $user->name     = $verification->name;
+        $user->email    = $verification->email;
+        $user->role     = 'user';
+        // Gán thẳng vào attribute để bypass cast 'hashed'
+        $user->setRawAttributes(array_merge($user->getAttributes(), [
+            'password' => $verification->password, // đã là bcrypt hash
+        ]));
+        $user->save();
 
         $verification->delete();
         $token = $user->createToken('studyhub_token')->plainTextToken;
