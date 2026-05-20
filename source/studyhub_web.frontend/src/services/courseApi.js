@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // 1. Khởi tạo instance của axios
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -40,6 +40,11 @@ apiClient.interceptors.response.use(
 );
 
 class CourseAPI {
+  static async login(email, password) { return apiClient.post('/login', { email, password }); }
+  static async loginGoogle(token) { return apiClient.post('/login/google', { token }); }
+  static async register(data) { return apiClient.post('/register', data); }
+  static async verifyEmail(email, code) { return apiClient.post('/register/verify-email', { email, code }); }
+  static async resendOtp(email) { return apiClient.post('/register/resend-otp', { email }); }
   static async getLecturerCourses() { return apiClient.get('/lecturer/courses'); } // Lấy tất cả khóa học của giảng viên (bao gồm cả draft và published)
   static async createDraft(title) { return apiClient.post('/lecturer/courses', { title }); } // Tạo khóa học mới ở trạng thái draft với tiêu đề mặc định
   static async getDraft(courseGroupId) { return apiClient.get(`/lecturer/courses/${courseGroupId}/draft`); } // Lấy chi tiết khóa học ở trạng thái draft (dùng để edit)
