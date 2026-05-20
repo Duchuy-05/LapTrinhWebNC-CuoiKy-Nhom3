@@ -56,7 +56,7 @@ export default function Login() {
             <label className="block mb-2 text-sm font-medium text-slate-300">Email</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
-              placeholder="nhapemail@epu.edu.vn" />
+              placeholder="email@gmail.com" />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-slate-300">Mật khẩu</label>
