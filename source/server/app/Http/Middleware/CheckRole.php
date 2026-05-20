@@ -8,18 +8,22 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
 
-        // Không có user (chưa đăng nhập) — auth:sanctum đã chặn trước rồi,
-        // nhưng guard phòng thủ thêm một lớp
+        // Không có user (chưa đăng nhập)
         if (!$user) {
             return response()->json([
                 'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.',
             ], 401);
         }
+
+        // ==========================================
+        // DÒNG CODE THÊM MỚI ĐỂ SỬA LỖI 403
+        // Tự động thêm 'user' vào danh sách các quyền được phép vượt qua
+        // ==========================================
+        $roles[] = 'user'; 
 
         // Kiểm tra role của user có nằm trong danh sách được phép không
         if (!in_array($user->role, $roles, strict: true)) {
