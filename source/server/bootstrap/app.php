@@ -13,9 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         
-        // THÊM DÒNG NÀY: Tắt kiểm tra CSRF cho tất cả các API để React có thể gửi dữ liệu vào
+        // Tắt kiểm tra CSRF cho tất cả các API để React có thể gửi dữ liệu vào
         $middleware->validateCsrfTokens(except: [
             'api/*',
+        ]);
+
+        // Đăng ký alias 'role' để dùng trong route file:
+        //   ->middleware('role:lecturer')
+        //   ->middleware('role:lecturer,admin')
+        $middleware->alias([
+            'role' => \App\Http\Middleware\CheckRole::class,
         ]);
         
     })

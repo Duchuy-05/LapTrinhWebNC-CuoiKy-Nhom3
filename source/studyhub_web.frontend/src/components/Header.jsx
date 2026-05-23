@@ -29,7 +29,7 @@ export default function CommonHeader({ mode }) {
   return (
     <header className="fixed top-0 right-0 left-0 h-16 bg-white border-b border-slate-200 z-50 flex items-center justify-between px-6 shadow-sm">
       {/* TRÁI: Logo (link điều hướng về /student/dashboard) */}
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/student/dashboard')}>
+      <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/student/home')}>
       {/* TRÁI: Logo
     </div>  <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/student/home')}> */}
         <img src={StudyHubLogo} alt="Logo" className="w-10 h-10 rounded-lg" />

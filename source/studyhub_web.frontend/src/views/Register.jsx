@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import googleLogo from '../assets/images/logo_google.png';
 import VerifyEmail from './VerifyEmail';
+import CourseAPI from '../services/courseApi';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -12,32 +13,21 @@ export default function Register() {
   const [errorMessage, setErrorMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Trạng thái chờ xác thực OTP
   const [needsVerification, setNeedsVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
-
   const navigate = useNavigate();
 
   const registerWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const response = await fetch('http://localhost:8000/api/login/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ token: tokenResponse.access_token })
-        });
-        const data = await response.json();
-        
+        const { data } = await CourseAPI.loginGoogle(tokenResponse.access_token);
         if (data.success === true) {
-          // Google đã xác thực email từ phía họ nên được phép đăng nhập thẳng
           localStorage.setItem('token', data.token);
           localStorage.setItem('user_data', JSON.stringify(data.user));
           navigate('/student/home');
         } else {
           setErrorMessage(data.message || 'Lỗi xác thực Google từ Server!');
         }
-
       } catch {
         setErrorMessage('Không thể kết nối đến Server.');
       }
@@ -50,11 +40,7 @@ export default function Register() {
     setErrorMessage('');
     setPasswordError('');
 
-    if (
-      password.length < 6 ||
-      !/[A-Z]/.test(password) ||
-      !/[!@#$%^&*(),.?":{}|<>\-_]/.test(password)
-    ) {
+    if (password.length < 6 || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>\-_]/.test(password)) {
       setPasswordError('Mật khẩu phải có ít nhất 6 ký tự, chứa 1 chữ in hoa và 1 ký tự đặc biệt!');
       return;
     }
@@ -65,52 +51,33 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ name, email, password, password_confirmation: passwordConfirmation })
+      const { data } = await CourseAPI.register({
+        name, email, password, password_confirmation: passwordConfirmation
       });
-      const data = await response.json();
-
-      // ĐÃ SỬA: Loại bỏ hoàn toàn khả năng đăng nhập vượt rào
-      // Bất kể backend trả về success hay needs_verification, đều ép buộc qua màn hình OTP
       if (data.success === true || data.status === 'needs_verification') {
-         setPendingEmail(data.email || email);
-         setNeedsVerification(true);
+        setPendingEmail(data.email || email);
+        setNeedsVerification(true);
       } else {
-         const errorMsg = data.errors
-           ? Object.values(data.errors)[0][0]
-           : (data.message || 'Đăng ký thất bại!');
-         setErrorMessage(errorMsg);
+        const errorMsg = data.errors
+          ? Object.values(data.errors)[0][0]
+          : (data.message || 'Đăng ký thất bại!');
+        setErrorMessage(errorMsg);
       }
-
-    } catch {
-      setErrorMessage('Không thể kết nối đến Server.');
+    } catch (error) {
+      const errorMsg = error.response?.data?.errors
+        ? Object.values(error.response.data.errors)[0][0]
+        : (error.response?.data?.message || 'Không thể kết nối đến Server.');
+      setErrorMessage(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Xác thực OTP thành công
-  const handleVerifySuccess = () => {
-    navigate('/student/home');
-  };
+  const handleVerifySuccess = () => navigate('/student/home');
+  const handleBackToRegister = () => { setNeedsVerification(false); setPendingEmail(''); };
 
-  // Quay lại form đăng ký
-  const handleBackToRegister = () => {
-    setNeedsVerification(false);
-    setPendingEmail('');
-  };
-
-  // Đang ở bước nhập OTP → render VerifyEmail
   if (needsVerification) {
-    return (
-      <VerifyEmail
-        email={pendingEmail}
-        onSuccess={handleVerifySuccess}
-        onBack={handleBackToRegister}
-      />
-    );
+    return <VerifyEmail email={pendingEmail} onSuccess={handleVerifySuccess} onBack={handleBackToRegister} />;
   }
 
   return (
@@ -122,6 +89,7 @@ export default function Register() {
       <div className="relative z-10 w-full max-w-md p-10 mx-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <h2 className="mb-8 text-3xl font-bold text-center text-white">Tạo tài khoản</h2>
         {errorMessage && <div className="p-3 mb-6 text-sm text-center text-red-200 bg-red-500/20 rounded-xl">{errorMessage}</div>}
+
         <form onSubmit={handleRegister} className="flex flex-col gap-5">
           <div>
             <label className="block mb-2 text-sm font-medium text-slate-300">Họ và tên</label>
@@ -133,7 +101,7 @@ export default function Register() {
             <label className="block mb-2 text-sm font-medium text-slate-300">Email</label>
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
-              placeholder="nhapemail@epu.edu.vn" />
+              placeholder="email@gmail.com" />
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-slate-300">Mật khẩu</label>
@@ -148,7 +116,6 @@ export default function Register() {
               className="w-full px-4 py-3 text-white transition-all border outline-none bg-slate-800/50 border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
               placeholder="••••••••" />
           </div>
-
           <button type="submit" disabled={loading}
             className="w-full py-3 mt-2 font-bold text-white transition-all bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100">
             {loading ? 'Đang gửi mã...' : 'Đăng ký ngay'}
