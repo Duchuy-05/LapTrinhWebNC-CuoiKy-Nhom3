@@ -34,3 +34,10 @@ Dự án tập trung xây dựng một hệ sinh thái học tập trực tuyế
 * [SRS Chức năng Quản lý Người dùng](./SRS/SRS_QuanLyNguoiDung.md)
 * [SRS Chức năng Thanh toán & Quản lý Đơn hàng](./SRS/SRS_ThanhToanDonHang.md)
 * [SRS Chức năng Xác thực & Phân quyền](./SRS/SRS_XacThucPhanQuyen.md)
+
+## Tên miền:
+| STT | Họ và tên | Tên miền |
+|:---:|:---|:---|
+| 1 | Nguyễn Trọng Đại | nguyendaj36.id.vn |
+| 2 | Nguyễn Tiến Đức Huy | duchuy05cnpm.id.vn |
+| 3 | Tiêu Trung Kiên | tieutrungkien05.id.vn |
