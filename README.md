@@ -13,11 +13,11 @@ Dự án tập trung xây dựng một hệ sinh thái học tập trực tuyế
 * **Năm thực hiện:** 2026
 
 ## Sinh viên thực hiện
-| STT | Họ và tên | Mã sinh viên |
-|:---:|:---|:---|
-| 1 | Nguyễn Trọng Đại | 23810310120 |
-| 2 | Nguyễn Tiến Đức Huy | 23810310127 |
-| 3 | Tiêu Trung Kiên | 23810310129 |
+| STT | Họ và tên | Mã sinh viên | Nhiệm vụ |
+|:---:|:---|:---|:---|
+| 1 | Nguyễn Trọng Đại | 23810310120 | Vai trò Admin |
+| 2 | Nguyễn Tiến Đức Huy | 23810310127 |Vai trò Giảng viên, đăng nhập Google. |
+| 3 | Tiêu Trung Kiên | 23810310129 |Deploy website, vai trò Học viên | 
 
 ---
 
@@ -41,3 +41,17 @@ Dự án tập trung xây dựng một hệ sinh thái học tập trực tuyế
 | 1 | Nguyễn Trọng Đại | nguyendaj36.id.vn |
 | 2 | Nguyễn Tiến Đức Huy | duchuy05cnpm.id.vn |
 | 3 | Tiêu Trung Kiên | tieutrungkien05.id.vn |
+
+## Minh họa hệ thống 
+* Admin
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/adab2e3c-47cb-42be-9bc9-7a395e2c8726" />
+
+* Học viên
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/d7934bdc-9648-46c3-85dc-3bae39b55027" />
+
+* Giảng viên
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/36148bbd-63e5-4ff1-82d2-39e29c36dc6d" />
+
+## Link video demo
+https://drive.google.com/file/d/1H93YW0_mgJsSN-9e0h2CM0TjJcLN4CYS/view?usp=drive_link 
+
